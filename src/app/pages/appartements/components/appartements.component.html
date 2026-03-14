@@ -1,0 +1,725 @@
+<div class="min-h-screen bg-slate-50 px-3 sm:px-4 lg:px-6 xl:px-10 py-4 sm:py-6 lg:py-8">
+
+  <!-- ══════════════ HEADER ══════════════ -->
+  <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+    <div>
+      <p class="text-[10px] sm:text-xs font-bold text-primary uppercase tracking-widest mb-0.5 sm:mb-1">
+        Tableau de bord — Admin
+      </p>
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+        Gestion des Appartements
+      </h1>
+      <p class="text-slate-500 text-xs sm:text-sm mt-0.5 sm:mt-1">Liste, filtres et CRUD synchronisés avec Firestore</p>
+    </div>
+    <button
+      class="w-full sm:w-auto px-4 sm:px-5 py-2 sm:py-2.5 bg-primary hover:bg-primary/90 text-white
+             font-semibold text-xs sm:text-sm rounded-lg sm:rounded-xl shadow-sm
+             transition-all active:scale-95 whitespace-nowrap flex items-center justify-center gap-1"
+      type="button"
+      (click)="openModal()">
+      <span class="text-base sm:text-lg">+</span>
+      <span class="hidden xs:inline">Nouvel appartement</span>
+      <span class="xs:hidden">Ajouter</span>
+    </button>
+  </header>
+
+  <!-- ══════════════ FILTRES ══════════════ -->
+  <div class="bg-white border border-slate-200 rounded-xl sm:rounded-2xl shadow-sm px-3 sm:px-4 py-2 sm:py-3 mb-4 sm:mb-6
+              flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+
+    <!-- Recherche -->
+    <div class="flex items-center gap-1.5 sm:gap-2 flex-1 w-full sm:w-auto min-w-[140px] sm:min-w-[180px]">
+      <span class="text-slate-400 text-sm sm:text-base" aria-hidden="true">🔎</span>
+      <input
+        class="flex-1 bg-transparent text-xs sm:text-sm text-slate-700 placeholder-slate-400
+               outline-none border-none focus:ring-0 py-1.5"
+        aria-label="Rechercher un appartement"
+        [ngModel]="searchTerm"
+        (ngModelChange)="onSearch($event)"
+        placeholder="Rechercher..." />
+    </div>
+
+    <div class="w-full h-px sm:w-px sm:h-6 bg-slate-200 sm:block"></div>
+
+    <!-- Filtres en ligne -->
+    <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+      <!-- Filtre statut -->
+      <label class="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-semibold text-slate-500">
+        <span class="hidden sm:inline">Statut</span>
+        <select
+          class="text-xs sm:text-sm text-slate-600 border border-slate-200 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2
+                 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30
+                 focus:border-primary transition-all cursor-pointer font-normal min-w-[100px]"
+          [ngModel]="statusFilter"
+          (ngModelChange)="setStatusFilter($event)">
+          <option value="all">Tous</option>
+          <option value="occupé">Occupé</option>
+          <option value="vacant">Vacant</option>
+          <option value="en_renovation">Rénovation</option>
+        </select>
+      </label>
+
+      <!-- Filtre résidence -->
+      <label class="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-semibold text-slate-500">
+        <span class="hidden sm:inline">Résidence</span>
+        <select
+          class="text-xs sm:text-sm text-slate-600 border border-slate-200 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2
+                 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30
+                 focus:border-primary transition-all cursor-pointer font-normal min-w-[100px]"
+          [ngModel]="residenceFilter"
+          (ngModelChange)="setResidenceFilter($event)"
+          [disabled]="isResidenceAdmin">
+          <option value="all">Toutes</option>
+          <option *ngFor="let r of residences" [value]="r.docId">{{ r.name }}</option>
+        </select>
+      </label>
+
+      <!-- Filtre bâtiment -->
+      <label class="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-semibold text-slate-500">
+        <span class="hidden sm:inline">Bâtiment</span>
+        <select
+          class="text-xs sm:text-sm text-slate-600 border border-slate-200 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2
+                 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30
+                 focus:border-primary transition-all cursor-pointer font-normal min-w-[100px]"
+          [ngModel]="batimentFilter"
+          (ngModelChange)="setBatimentFilter($event)">
+          <option value="all">Tous</option>
+          <option *ngFor="let b of batiments" [value]="b.docId">{{ b.name }}</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <!-- ══════════════ TABLE / CARTES ══════════════ -->
+
+  <!-- Version mobile : cartes -->
+  <div class="block lg:hidden">
+    @if (filteredAppartements.length === 0) {
+      <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 p-8 text-center">
+        <div class="flex flex-col items-center">
+          <span class="text-3xl sm:text-4xl mb-2 sm:mb-3">🏠</span>
+          <p class="text-sm sm:text-base text-slate-700 font-semibold">Aucun appartement trouvé</p>
+          <p class="text-slate-400 text-xs sm:text-sm mt-1">Modifiez vos filtres ou créez un appartement.</p>
+        </div>
+      </div>
+    }
+    <div class="space-y-3 sm:space-y-4">
+      <div *ngFor="let appartement of filteredAppartements"
+           class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+
+        <!-- En-tête de la carte -->
+        <div class="p-3 sm:p-4 border-b border-slate-100">
+          <div class="flex items-start justify-between">
+            <div class="flex items-center gap-2 sm:gap-3">
+              <div class="w-8 h-8 sm:w-10 sm:h-10 bg-primary/10 text-primary rounded-lg sm:rounded-xl
+                          flex items-center justify-center text-base sm:text-xl flex-shrink-0">
+                🏠
+              </div>
+              <div>
+                <p class="font-semibold text-sm sm:text-base text-slate-900">Appartement {{ appartement.numero }}</p>
+                <div class="flex flex-wrap gap-1 mt-1">
+                  <span class="text-[8px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full whitespace-nowrap"
+                        [class.bg-emerald-50]="appartement.statut === 'occupé'"
+                        [class.text-emerald-700]="appartement.statut === 'occupé'"
+                        [class.bg-primary/10]="appartement.statut === 'vacant'"
+                        [class.text-primary]="appartement.statut === 'vacant'"
+                        [class.bg-amber-50]="appartement.statut === 'en_renovation'"
+                        [class.text-amber-700]="appartement.statut === 'en_renovation'">
+                    {{ statusLabel[appartement.statut] }}
+                  </span>
+                  <span class="text-[8px] sm:text-[10px] font-bold bg-slate-100 text-slate-600
+                               px-1.5 sm:px-2 py-0.5 rounded-full whitespace-nowrap">
+                    {{ appartement.type }}
+                  </span>
+                  <span *ngIf="appartement.caracteristiques.includes('Parking')"
+                        class="text-[8px] sm:text-[10px] font-bold bg-blue-50 text-blue-700
+                               px-1.5 sm:px-2 py-0.5 rounded-full whitespace-nowrap">
+                    🅿️ Parking
+                  </span>
+                  <span *ngIf="appartement.caracteristiques.includes('Ascenseur')"
+                        class="text-[8px] sm:text-[10px] font-bold bg-indigo-50 text-indigo-700
+                               px-1.5 sm:px-2 py-0.5 rounded-full whitespace-nowrap">
+                    🛗 Ascenseur
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-1">
+              <button
+                class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-slate-100 text-slate-400
+                       hover:text-slate-600 flex items-center justify-center
+                       transition-colors text-xs sm:text-sm"
+                type="button" aria-label="Détails"
+                (click)="openDetail(appartement)">
+                🔍
+              </button>
+              <button
+                class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-primary/10 text-slate-400
+                       hover:text-primary flex items-center justify-center
+                       transition-colors text-xs sm:text-sm"
+                type="button" aria-label="Modifier"
+                (click)="openModal(appartement)">
+                ✏️
+              </button>
+              <button
+                class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-red-50 text-slate-400
+                       hover:text-red-500 flex items-center justify-center
+                       transition-colors text-xs sm:text-sm"
+                type="button" aria-label="Supprimer"
+                (click)="deleteAppartement(appartement)">
+                🗑️
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Corps de la carte -->
+        <div class="p-3 sm:p-4">
+          <div class="grid grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm mb-2 sm:mb-3">
+            <div>
+              <p class="text-[9px] sm:text-[10px] text-slate-400 font-semibold uppercase">Propriétaire</p>
+              @if (getUserName(appartement.docId)) {
+                <p class="text-xs sm:text-sm text-slate-700 truncate">{{ getUserName(appartement.docId) }}</p>
+              } @else {
+                <p class="text-xs sm:text-sm text-slate-400 italic">Aucun</p>
+              }
+            </div>
+            <div>
+              <p class="text-[9px] sm:text-[10px] text-slate-400 font-semibold uppercase">Localisation</p>
+              <p class="text-xs sm:text-sm text-slate-700 truncate">{{ getResidenceName(appartement.residenceDocId || '') }}</p>
+              <p class="text-[9px] sm:text-xs text-slate-400 mt-0.5">
+                {{ getBatimentName(appartement.batimentDocId || '') }} · Étage {{ appartement.etage }}
+              </p>
+            </div>
+            <div>
+              <p class="text-[9px] sm:text-[10px] text-slate-400 font-semibold uppercase">Surface</p>
+              <p class="text-xs sm:text-sm text-slate-700">{{ appartement.surface }} m²</p>
+              <p class="text-[9px] sm:text-xs text-slate-400 mt-0.5">{{ appartement.nombrePieces }} pièces</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm mb-2 sm:mb-3">
+            <div>
+              <p class="text-[9px] sm:text-[10px] text-slate-400 font-semibold uppercase">Charges</p>
+              <p class="text-xs sm:text-sm font-medium text-slate-500 italic">Calculé auto</p>
+              <p class="text-[9px] sm:text-xs text-slate-400">Quote-part {{ appartement.quotePart }}%</p>
+            </div>
+            <div>
+              <p class="text-[9px] sm:text-[10px] text-slate-400 font-semibold uppercase">Caractéristiques</p>
+              <div class="flex flex-wrap gap-1">
+                <span
+                  class="text-[8px] sm:text-[9px] font-medium bg-slate-100 text-slate-600
+                         px-1.5 py-0.5 rounded-full"
+                  *ngFor="let caract of appartement.caracteristiques | slice:0:2">
+                  {{ caract }}
+                </span>
+                <span
+                  class="text-[8px] sm:text-[9px] font-bold bg-primary/10 text-primary
+                         px-1.5 py-0.5 rounded-full"
+                  *ngIf="appartement.caracteristiques.length > 2">
+                  +{{ appartement.caracteristiques.length - 2 }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Version desktop : tableau -->
+  <div class="hidden lg:block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+
+    <div class="px-4 lg:px-6 py-3 lg:py-4 border-b border-slate-100 flex items-center justify-between">
+      <div>
+        <p class="text-[9px] lg:text-xs text-slate-500 font-semibold uppercase tracking-wider">Inventaire</p>
+        <h3 class="text-sm lg:text-base font-bold text-slate-900">
+          {{ filteredAppartements.length }} appartement(s)
+        </h3>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-100 bg-slate-50">
+            <th class="px-4 lg:px-6 py-2 lg:py-3 text-left text-[10px] lg:text-[11px] font-bold uppercase tracking-wider text-slate-500">Appartement</th>
+            <th class="px-4 lg:px-6 py-2 lg:py-3 text-left text-[10px] lg:text-[11px] font-bold uppercase tracking-wider text-slate-500">Propriétaire</th>
+            <th class="px-4 lg:px-6 py-2 lg:py-3 text-left text-[10px] lg:text-[11px] font-bold uppercase tracking-wider text-slate-500">Localisation</th>
+            <th class="px-4 lg:px-6 py-2 lg:py-3 text-left text-[10px] lg:text-[11px] font-bold uppercase tracking-wider text-slate-500">Charges</th>
+            <th class="px-4 lg:px-6 py-2 lg:py-3 text-left text-[10px] lg:text-[11px] font-bold uppercase tracking-wider text-slate-500">Caractéristiques</th>
+            <th class="px-4 lg:px-6 py-2 lg:py-3 text-right text-[10px] lg:text-[11px] font-bold uppercase tracking-wider text-slate-500">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (filteredAppartements.length === 0) {
+            <tr>
+              <td colspan="6" class="px-4 lg:px-6 py-16 lg:py-20 text-center">
+                <div class="flex flex-col items-center">
+                  <span class="text-3xl lg:text-4xl mb-2 lg:mb-3">🏠</span>
+                  <p class="text-sm lg:text-base text-slate-700 font-semibold">Aucun appartement trouvé</p>
+                  <p class="text-slate-400 text-xs lg:text-sm mt-1">Modifiez vos filtres ou créez un appartement.</p>
+                </div>
+              </td>
+            </tr>
+          }
+          <tr *ngFor="let appartement of filteredAppartements"
+              class="border-b border-slate-100 hover:bg-slate-50/70 transition-colors">
+
+            <!-- Appartement -->
+            <td class="px-4 lg:px-6 py-3 lg:py-4">
+              <div class="flex items-center gap-2 lg:gap-3">
+                <div class="w-8 h-8 lg:w-10 lg:h-10 bg-primary/10 text-primary rounded-lg lg:rounded-xl
+                            flex items-center justify-center text-base lg:text-xl flex-shrink-0">
+                  🏠
+                </div>
+                <div>
+                  <p class="font-semibold text-sm lg:text-base text-slate-900">Appartement {{ appartement.numero }}</p>
+                  <div class="flex flex-wrap gap-1 mt-1">
+                    <span class="text-[8px] lg:text-[10px] font-bold px-1.5 lg:px-2 py-0.5 rounded-full"
+                          [class.bg-emerald-50]="appartement.statut === 'occupé'"
+                          [class.text-emerald-700]="appartement.statut === 'occupé'"
+                          [class.bg-primary/10]="appartement.statut === 'vacant'"
+                          [class.text-primary]="appartement.statut === 'vacant'"
+                          [class.bg-amber-50]="appartement.statut === 'en_renovation'"
+                          [class.text-amber-700]="appartement.statut === 'en_renovation'">
+                      {{ statusLabel[appartement.statut] }}
+                    </span>
+                    <span class="text-[8px] lg:text-[10px] font-bold bg-slate-100 text-slate-600
+                                 px-1.5 lg:px-2 py-0.5 rounded-full">
+                      {{ appartement.type }}
+                    </span>
+                    <span *ngIf="appartement.caracteristiques.includes('Parking')"
+                          class="text-[8px] lg:text-[10px] font-bold bg-blue-50 text-blue-700
+                                 px-1.5 lg:px-2 py-0.5 rounded-full">
+                      🅿️ Parking
+                    </span>
+                    <span *ngIf="appartement.caracteristiques.includes('Ascenseur')"
+                          class="text-[8px] lg:text-[10px] font-bold bg-indigo-50 text-indigo-700
+                                 px-1.5 lg:px-2 py-0.5 rounded-full">
+                      🛗 Ascenseur
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </td>
+
+            <!-- Propriétaire -->
+            <td class="px-4 lg:px-6 py-3 lg:py-4">
+              @if (getUserName(appartement.docId)) {
+                <div class="flex items-center gap-2">
+                  <div class="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                    {{ getUserName(appartement.docId).charAt(0).toUpperCase() }}
+                  </div>
+                  <p class="text-xs lg:text-sm text-slate-700 truncate">{{ getUserName(appartement.docId) }}</p>
+                </div>
+              } @else {
+                <p class="text-xs lg:text-sm text-slate-400 italic">Aucun</p>
+              }
+            </td>
+
+            <!-- Localisation -->
+            <td class="px-4 lg:px-6 py-3 lg:py-4">
+              <p class="text-xs lg:text-sm text-slate-700">{{ getResidenceName(appartement.residenceDocId || '') }}</p>
+              <p class="text-[9px] lg:text-xs text-slate-400 mt-0.5">
+                {{ getBatimentName(appartement.batimentDocId || '') }} · Étage {{ appartement.etage }}
+              </p>
+              <p class="text-[9px] lg:text-xs text-slate-400 mt-0.5">
+                {{ appartement.surface }} m² • {{ appartement.nombrePieces }} pièces
+              </p>
+            </td>
+
+            <!-- Charges -->
+            <td class="px-4 lg:px-6 py-3 lg:py-4">
+              <p class="text-sm lg:text-base font-medium text-slate-500 italic">Calculé auto</p>
+              <p class="text-[9px] lg:text-xs text-slate-400 mt-0.5">Quote-part {{ appartement.quotePart }}%</p>
+            </td>
+
+            <!-- Caractéristiques -->
+            <td class="px-4 lg:px-6 py-3 lg:py-4">
+              <div class="flex flex-wrap gap-1">
+                <span
+                  class="text-[8px] lg:text-[10px] font-medium bg-slate-100 text-slate-600
+                         px-1.5 lg:px-2 py-0.5 rounded-full"
+                  *ngFor="let caract of appartement.caracteristiques | slice:0:3">
+                  {{ caract }}
+                </span>
+                <span
+                  class="text-[8px] lg:text-[10px] font-bold bg-primary/10 text-primary
+                         px-1.5 lg:px-2 py-0.5 rounded-full"
+                  *ngIf="appartement.caracteristiques.length > 3">
+                  +{{ appartement.caracteristiques.length - 3 }}
+                </span>
+              </div>
+            </td>
+
+            <!-- Actions -->
+            <td class="px-4 lg:px-6 py-3 lg:py-4">
+              <div class="flex items-center justify-end gap-0.5 lg:gap-1">
+                <button
+                  class="w-6 h-6 lg:w-8 lg:h-8 rounded-lg hover:bg-slate-100 text-slate-400
+                         hover:text-slate-600 flex items-center justify-center
+                         transition-colors text-xs lg:text-base"
+                  type="button" aria-label="Détails"
+                  (click)="openDetail(appartement)">
+                  🔍
+                </button>
+                <button
+                  class="w-6 h-6 lg:w-8 lg:h-8 rounded-lg hover:bg-primary/10 text-slate-400
+                         hover:text-primary flex items-center justify-center
+                         transition-colors text-xs lg:text-base"
+                  type="button" aria-label="Modifier"
+                  (click)="openModal(appartement)">
+                  ✏️
+                </button>
+                <button
+                  class="w-6 h-6 lg:w-8 lg:h-8 rounded-lg hover:bg-red-50 text-slate-400
+                         hover:text-red-500 flex items-center justify-center
+                         transition-colors text-xs lg:text-base"
+                  type="button" aria-label="Supprimer"
+                  (click)="deleteAppartement(appartement)">
+                  🗑️
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════════ DETAIL MODAL ══════════════ -->
+  <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50
+              flex items-center justify-center p-2 sm:p-4"
+       *ngIf="detailAppartement"
+       (click)="closeDetail()" role="presentation">
+
+    <div class="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh]
+                overflow-y-auto flex flex-col m-2 sm:m-4"
+         role="dialog" aria-modal="true" aria-label="Détails appartement"
+         (click)="$event.stopPropagation()">
+
+      <div class="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-5 border-b border-slate-100 flex-shrink-0">
+        <div>
+          <p class="text-[9px] sm:text-xs font-bold text-primary uppercase tracking-widest">Détails</p>
+          <h3 class="text-base sm:text-lg font-bold text-slate-900 mt-0.5">
+            Appartement {{ detailAppartement.numero }}
+          </h3>
+        </div>
+        <button
+          class="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-slate-100 hover:bg-slate-200
+                 text-slate-500 font-bold text-base sm:text-lg flex items-center justify-center transition-colors"
+          type="button" aria-label="Fermer" (click)="closeDetail()">✕</button>
+      </div>
+
+      <div class="p-4 sm:p-6 flex flex-col gap-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <p class="text-[10px] text-slate-400 font-semibold uppercase">Type</p>
+            <p class="text-sm font-semibold text-slate-700">{{ detailAppartement.type }}</p>
+          </div>
+          <div>
+            <p class="text-[10px] text-slate-400 font-semibold uppercase">Statut</p>
+            <p class="text-sm font-semibold" [class.text-emerald-600]="detailAppartement.statut === 'occupé'"
+               [class.text-primary]="detailAppartement.statut === 'vacant'"
+               [class.text-amber-600]="detailAppartement.statut === 'en_renovation'">
+              {{ statusLabel[detailAppartement.statut] }}
+            </p>
+          </div>
+          <div>
+            <p class="text-[10px] text-slate-400 font-semibold uppercase">Surface</p>
+            <p class="text-sm text-slate-700">{{ detailAppartement.surface }} m²</p>
+          </div>
+          <div>
+            <p class="text-[10px] text-slate-400 font-semibold uppercase">Pièces</p>
+            <p class="text-sm text-slate-700">{{ detailAppartement.nombrePieces }}</p>
+          </div>
+          <div>
+            <p class="text-[10px] text-slate-400 font-semibold uppercase">Résidence</p>
+            <p class="text-sm text-slate-700">{{ getResidenceName(detailAppartement.residenceDocId || '') }}</p>
+          </div>
+          <div>
+            <p class="text-[10px] text-slate-400 font-semibold uppercase">Bâtiment</p>
+            <p class="text-sm text-slate-700">{{ getBatimentName(detailAppartement.batimentDocId || '') }}</p>
+          </div>
+          <div>
+            <p class="text-[10px] text-slate-400 font-semibold uppercase">Étage</p>
+            <p class="text-sm text-slate-700">{{ detailAppartement.etage }}</p>
+          </div>
+          <div>
+            <p class="text-[10px] text-slate-400 font-semibold uppercase">Quote-part</p>
+            <p class="text-sm text-slate-700">{{ detailAppartement.quotePart }}%</p>
+          </div>
+          <div>
+            <p class="text-[10px] text-slate-400 font-semibold uppercase">Propriétaire</p>
+            <p class="text-sm text-slate-700">{{ getUserName(detailAppartement.docId) || 'Aucun' }}</p>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-[10px] text-slate-400 font-semibold uppercase mb-1">Caractéristiques</p>
+          <div class="flex flex-wrap gap-1.5">
+            <span *ngFor="let c of detailAppartement.caracteristiques"
+                  class="text-[10px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+              {{ c }}
+            </span>
+            <span *ngIf="!detailAppartement.caracteristiques.length" class="text-xs text-slate-400 italic">Aucune</span>
+          </div>
+        </div>
+
+        <div class="flex justify-end border-t border-slate-100 pt-4">
+          <button
+            class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600
+                   hover:bg-slate-50 font-semibold text-sm transition-colors"
+            type="button" (click)="closeDetail()">Fermer</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════ MODAL ══════════════ -->
+  <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50
+              flex items-center justify-center p-2 sm:p-4"
+       *ngIf="isModalOpen"
+       (click)="closeModal()" role="presentation">
+
+    <div class="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh]
+                overflow-y-auto flex flex-col m-2 sm:m-4"
+         role="dialog" aria-modal="true" aria-label="Appartement"
+         (click)="$event.stopPropagation()">
+
+      <!-- Header modal -->
+      <div class="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-5 border-b border-slate-100 flex-shrink-0">
+        <div>
+          <p class="text-[9px] sm:text-xs font-bold text-primary uppercase tracking-widest">Fiche appartement</p>
+          <h3 class="text-base sm:text-lg lg:text-xl font-bold text-slate-900 mt-0.5">
+            {{ editingDocId ? 'Modifier l\'appartement' : 'Nouvel appartement' }}
+          </h3>
+        </div>
+        <button
+          class="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-slate-100 hover:bg-slate-200
+                 text-slate-500 font-bold text-base sm:text-lg flex items-center justify-center
+                 transition-colors"
+          type="button" aria-label="Fermer" (click)="closeModal()">
+          ✕
+        </button>
+      </div>
+
+      <!-- Form -->
+      <form class="p-4 sm:p-6 flex flex-col gap-3 sm:gap-5" (ngSubmit)="saveAppartement()">
+
+        <!-- Ligne 1 -->
+        <div class="grid grid-cols-3 gap-2 sm:gap-4">
+          <label class="flex flex-col gap-1">
+            <span class="text-[8px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Numéro *</span>
+            <input
+              class="rounded-lg sm:rounded-xl border border-slate-200 px-2 sm:px-3.5 py-1.5 sm:py-2.5 text-xs sm:text-sm
+                     focus:outline-none focus:ring-1 sm:focus:ring-2 focus:ring-primary/30
+                     focus:border-primary transition-all"
+              name="numero" [(ngModel)]="form.numero" placeholder="A101" required />
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="text-[8px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Surface *</span>
+            <input
+              class="rounded-lg sm:rounded-xl border border-slate-200 px-2 sm:px-3.5 py-1.5 sm:py-2.5 text-xs sm:text-sm
+                     focus:outline-none focus:ring-1 sm:focus:ring-2 focus:ring-primary/30
+                     focus:border-primary transition-all"
+              type="number" name="surface" [(ngModel)]="form.surface" min="0" step="0.01" required />
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="text-[8px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Pièces *</span>
+            <input
+              class="rounded-lg sm:rounded-xl border border-slate-200 px-2 sm:px-3.5 py-1.5 sm:py-2.5 text-xs sm:text-sm
+                     focus:outline-none focus:ring-1 sm:focus:ring-2 focus:ring-primary/30
+                     focus:border-primary transition-all"
+              type="number" name="nombrePieces" [(ngModel)]="form.nombrePieces" min="1" required />
+          </label>
+        </div>
+
+        <!-- Ligne 2 : Résidence / Bâtiment / Étage -->
+        <div class="grid grid-cols-3 gap-2 sm:gap-4">
+          <label class="flex flex-col gap-1">
+            <span class="text-[8px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Résidence *</span>
+            <select
+              class="rounded-lg sm:rounded-xl border border-slate-200 px-2 sm:px-3.5 py-1.5 sm:py-2.5 text-xs sm:text-sm
+                     focus:outline-none focus:ring-1 sm:focus:ring-2 focus:ring-primary/30
+                     focus:border-primary transition-all bg-white cursor-pointer"
+              name="residenceDocId" [(ngModel)]="form.residenceDocId"
+              (ngModelChange)="onResidenceChange($event)" required
+              [disabled]="isResidenceAdmin">
+              <option [ngValue]="undefined">--</option>
+              <option *ngFor="let r of residences" [ngValue]="r.docId">{{ r.name }}</option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="text-[8px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Bâtiment *</span>
+            <select
+              class="rounded-lg sm:rounded-xl border border-slate-200 px-2 sm:px-3.5 py-1.5 sm:py-2.5 text-xs sm:text-sm
+                     focus:outline-none focus:ring-1 sm:focus:ring-2 focus:ring-primary/30
+                     focus:border-primary transition-all bg-white cursor-pointer"
+              name="batimentDocId" [(ngModel)]="form.batimentDocId"
+              (ngModelChange)="onBatimentChange($event)" required>
+              <option [ngValue]="undefined">--</option>
+              <option *ngFor="let b of batiments" [ngValue]="b.docId">{{ b.name }}</option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="text-[8px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Étage *</span>
+            <select
+              class="rounded-lg sm:rounded-xl border border-slate-200 px-2 sm:px-3.5 py-1.5 sm:py-2.5 text-xs sm:text-sm
+                     focus:outline-none focus:ring-1 sm:focus:ring-2 focus:ring-primary/30
+                     focus:border-primary transition-all bg-white cursor-pointer"
+              name="etage" [(ngModel)]="form.etage"
+              (ngModelChange)="onEtageChange($event)" required>
+              <option *ngFor="let f of availableFloors" [ngValue]="f">{{ f }}</option>
+              <option *ngIf="!availableFloors.length" [ngValue]="0">0</option>
+            </select>
+          </label>
+        </div>
+
+        <!-- Ligne 3 : Type / Statut / Quote-part -->
+        <div class="grid grid-cols-3 gap-2 sm:gap-4">
+          <label class="flex flex-col gap-1">
+            <span class="text-[8px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Type *</span>
+            <select
+              class="rounded-lg sm:rounded-xl border border-slate-200 px-2 sm:px-3.5 py-1.5 sm:py-2.5 text-xs sm:text-sm
+                     focus:outline-none focus:ring-1 sm:focus:ring-2 focus:ring-primary/30
+                     focus:border-primary transition-all bg-white cursor-pointer"
+              name="type" [(ngModel)]="form.type" (ngModelChange)="setType($event)" required>
+              <option value="T1">T1</option>
+              <option value="T2">T2</option>
+              <option value="T3">T3</option>
+              <option value="T4">T4</option>
+              <option value="T5">T5</option>
+              <option value="Duplex">Duplex</option>
+              <option value="Studio">Studio</option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="text-[8px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Statut *</span>
+            <select
+              class="rounded-lg sm:rounded-xl border border-slate-200 px-2 sm:px-3.5 py-1.5 sm:py-2.5 text-xs sm:text-sm
+                     focus:outline-none focus:ring-1 sm:focus:ring-2 focus:ring-primary/30
+                     focus:border-primary transition-all bg-white cursor-pointer"
+              name="statut" [(ngModel)]="form.statut" (ngModelChange)="setStatut($event)" required>
+              <option value="vacant">Vacant</option>
+              <option value="occupé">Occupé</option>
+              <option value="en_renovation">Rénovation</option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1">
+            <span class="text-[8px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Quote-part % *</span>
+            <input
+              class="rounded-lg sm:rounded-xl border border-slate-200 px-2 sm:px-3.5 py-1.5 sm:py-2.5 text-xs sm:text-sm
+                     focus:outline-none focus:ring-1 sm:focus:ring-2 focus:ring-primary/30
+                     focus:border-primary transition-all"
+              type="number" name="quotePart" [(ngModel)]="form.quotePart" min="0" step="0.01" required />
+          </label>
+        </div>
+
+        <!-- Ligne 4 : Parking & Ascenseur -->
+        <div class="grid grid-cols-2 gap-3 sm:gap-4">
+          <!-- Parking toggle -->
+          <div class="flex flex-col gap-1.5">
+            <span class="text-[8px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Parking</span>
+            <button type="button"
+              class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border transition-all"
+              [class.border-primary]="hasParking"
+              [class.bg-primary/5]="hasParking"
+              [class.border-slate-200]="!hasParking"
+              [class.bg-white]="!hasParking"
+              (click)="toggleParking()">
+              <span class="relative flex items-center w-9 h-5 sm:w-10 sm:h-[22px] rounded-full transition-colors"
+                    [class.bg-primary]="hasParking" [class.bg-slate-300]="!hasParking">
+                <span class="absolute w-3.5 h-3.5 sm:w-4 sm:h-4 bg-white rounded-full shadow transition-transform"
+                      [class.translate-x-[18px]]="hasParking"
+                      [class.sm:translate-x-[20px]]="hasParking"
+                      [class.translate-x-[2px]]="!hasParking"></span>
+              </span>
+              <div class="text-left">
+                <p class="text-xs sm:text-sm font-semibold"
+                   [class.text-primary]="hasParking" [class.text-slate-700]="!hasParking">
+                  🅿️ {{ hasParking ? 'Avec parking' : 'Sans parking' }}
+                </p>
+                <p class="text-[8px] sm:text-[10px] text-slate-400">Affecte le calcul des charges mensuelles</p>
+              </div>
+            </button>
+          </div>
+          <!-- Ascenseur toggle -->
+          <div class="flex flex-col gap-1.5">
+            <span class="text-[8px] sm:text-xs font-bold text-indigo-500 uppercase tracking-wider">Ascenseur</span>
+            <button type="button"
+              class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border transition-all"
+              [class.border-indigo-500]="hasAscenseur"
+              [class.bg-indigo-50]="hasAscenseur"
+              [class.border-slate-200]="!hasAscenseur"
+              [class.bg-white]="!hasAscenseur"
+              (click)="toggleAscenseur()">
+              <span class="relative flex items-center w-9 h-5 sm:w-10 sm:h-[22px] rounded-full transition-colors"
+                    [class.bg-indigo-500]="hasAscenseur" [class.bg-slate-300]="!hasAscenseur">
+                <span class="absolute w-3.5 h-3.5 sm:w-4 sm:h-4 bg-white rounded-full shadow transition-transform"
+                      [class.translate-x-[18px]]="hasAscenseur"
+                      [class.sm:translate-x-[20px]]="hasAscenseur"
+                      [class.translate-x-[2px]]="!hasAscenseur"></span>
+              </span>
+              <div class="text-left">
+                <p class="text-xs sm:text-sm font-semibold"
+                   [class.text-indigo-500]="hasAscenseur" [class.text-slate-700]="!hasAscenseur">
+                  🛗 {{ hasAscenseur ? 'Avec ascenseur' : 'Sans ascenseur' }}
+                </p>
+                <p class="text-[8px] sm:text-[10px] text-slate-400">Affecte le calcul des charges mensuelles</p>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Avertissement ascenseur -->
+        <div *ngIf="ascenseurWarning"
+             class="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800">
+          <span class="text-base mt-0.5">⚠️</span>
+          <p class="text-xs sm:text-sm">{{ ascenseurWarning }}</p>
+        </div>
+
+        <!-- Ligne 5 : Caractéristiques -->
+        <div class="flex flex-col gap-1">
+          <span class="text-[8px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">
+            Caractéristiques
+          </span>
+          <div class="flex flex-wrap gap-1 sm:gap-1.5">
+            <button
+              type="button"
+              class="text-[9px] sm:text-[11px] font-semibold px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full border
+                     transition-all duration-150"
+              [class.bg-primary]="form.caracteristiques?.includes(caract)"
+              [class.text-white]="form.caracteristiques?.includes(caract)"
+              [class.border-primary]="form.caracteristiques?.includes(caract)"
+              [class.bg-white]="!form.caracteristiques?.includes(caract)"
+              [class.text-slate-600]="!form.caracteristiques?.includes(caract)"
+              [class.border-slate-200]="!form.caracteristiques?.includes(caract)"
+              *ngFor="let caract of caracteristiquesOptions"
+              (click)="toggleCaracteristique(caract)">
+              {{ caract }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex items-center justify-end gap-2 sm:gap-3 border-t border-slate-100 pt-3 sm:pt-5">
+          <button
+            class="px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl border border-slate-200 text-slate-600
+                   hover:bg-slate-50 font-semibold text-xs sm:text-sm transition-colors"
+            type="button" (click)="closeModal()">
+            Annuler
+          </button>
+          <button
+            class="px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl bg-primary hover:bg-primary/90
+                   text-white font-semibold text-xs sm:text-sm shadow-sm
+                   transition-all active:scale-95"
+            type="submit">
+            {{ editingDocId ? 'Mettre à jour' : 'Créer' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

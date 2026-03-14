@@ -1,0 +1,37 @@
+.annee-page { display: flex; flex-direction: column; gap: 1.5rem; padding: 2rem; }
+.page-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 1.5rem; flex-wrap: wrap; }
+.page-header h1 { margin: 0; font-size: 1.75rem; }
+.page-header .muted { margin: 0.3rem 0 0; color: #6b7280; }
+.controls { display: flex; flex-direction: column; gap: 0.4rem; }
+.form-control { min-width: 160px; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid #d1d5db; }
+
+.alert { padding: 0.85rem 1rem; border-radius: 10px; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+.loader { padding: 0.85rem 1rem; border-radius: 10px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.info { padding: 0.85rem 1rem; border-radius: 10px; background: #ecfeff; color: #0f766e; border: 1px solid #99f6e4; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+.card { background: #fff; border-radius: 12px; padding: 1.1rem 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.card h2 { margin: 0 0 0.35rem; font-size: 1rem; color: #1f2937; }
+.card p { margin: 0; font-size: 1.1rem; font-weight: 600; }
+
+.filters { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.chip-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.chip { background: #f3f4f6; border: none; padding: 0.5rem 0.9rem; border-radius: 999px; cursor: pointer; transition: background 120ms ease; }
+.chip.active { background: #2563eb; color: #fff; }
+
+.table-wrapper { overflow-x: auto; }
+.table-wrapper table { width: 100%; border-collapse: collapse; min-width: 720px; }
+.table-wrapper th, .table-wrapper td { padding: 0.75rem 1rem; border-bottom: 1px solid #e5e7eb; text-align: left; }
+.table-wrapper tbody tr:hover { background: #f9fafb; }
+.month { text-transform: capitalize; }
+.empty { text-align: center; padding: 1.5rem 0; color: #6b7280; }
+
+.badge { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.badge-impayee { background: #fee2e2; color: #b91c1c; }
+.badge-partielle { background: #fef9c3; color: #854d0e; }
+.badge-payee { background: #d1fae5; color: #047857; }
+
+@media (max-width: 640px) {
+  .annee-page { padding: 1rem; }
+  .table-wrapper table { min-width: 100%; }
+}

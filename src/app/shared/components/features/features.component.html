@@ -1,0 +1,19 @@
+<section class="py-24 bg-gray-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <h2 class="text-base font-semibold text-indigo-600 uppercase tracking-wide">Pourquoi nous choisir ?</h2>
+      <p class="mt-2 text-3xl font-extrabold text-gray-900 sm:text-4xl">Tout ce dont vous avez besoin pour réussir</p>
+      <p class="mt-4 text-xl text-gray-500">Une suite d'outils puissants conçus pour accélérer votre croissance.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div *ngFor="let f of features; let i = index" class="bg-white rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center mb-6" [ngClass]="f.color">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <h3 class="text-xl font-bold text-gray-900 mb-3">{{ f.title }}</h3>
+        <p class="text-gray-600 leading-relaxed">{{ f.description }}</p>
+      </div>
+    </div>
+  </div>
+</section>

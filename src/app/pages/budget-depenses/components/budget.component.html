@@ -1,0 +1,321 @@
+<div class="min-h-screen bg-slate-50">
+  <div class="max-w-[1400px] mx-auto px-4 lg:px-10 py-8">
+
+    <!-- HEADER -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+      <div>
+        <p class="text-xs font-semibold text-primary uppercase tracking-widest mb-1">Finances</p>
+        <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Suivi du Budget</h1>
+        <p class="text-slate-500 mt-1">Contrôle budgétaire, dépenses réelles vs prévues, analyse par catégorie</p>
+      </div>
+      <div class="flex gap-3 items-center">
+        <div class="flex bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm text-sm font-semibold">
+          @for (a of annees; track a) {
+            <button (click)="changeAnnee(a)"
+              class="px-4 py-2.5 transition-colors border-r border-slate-100 last:border-0"
+              [class.bg-primary]="annee() === a" [class.text-white]="annee() === a"
+              [class.text-slate-600]="annee() !== a">{{ a }}</button>
+          }
+        </div>
+        <button (click)="openCreate()"
+          class="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all">
+          ➕ Ajouter une ligne
+        </button>
+      </div>
+    </div>
+
+    @if (loading()) {
+      <div class="flex items-center justify-center py-24 gap-3 text-slate-400">
+        <div class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <span class="text-sm">Chargement…</span>
+      </div>
+    } @else {
+
+      <!-- KPI FINANCIERS -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+          <div class="flex justify-between items-start mb-3">
+            <div class="p-2 bg-primary/10 text-primary rounded-lg text-xl">📋</div>
+          </div>
+          <p class="text-xs text-slate-500 font-semibold uppercase tracking-wide">Budget Prévu</p>
+          <p class="text-2xl font-black text-slate-900 tabular-nums mt-1">{{ formatMontant(budget().totalPrevu) }}</p>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+          <div class="flex justify-between items-start mb-3">
+            <div class="p-2 bg-red-50 text-red-600 rounded-lg text-xl">💸</div>
+            <span class="text-xs font-bold px-2 py-0.5 rounded-full"
+              [class.bg-red-100]="budget().tauxConsommation > 90"
+              [class.text-red-800]="budget().tauxConsommation > 90"
+              [class.bg-amber-100]="budget().tauxConsommation > 70 && budget().tauxConsommation <= 90"
+              [class.text-amber-800]="budget().tauxConsommation > 70 && budget().tauxConsommation <= 90"
+              [class.bg-emerald-100]="budget().tauxConsommation <= 70"
+              [class.text-emerald-800]="budget().tauxConsommation <= 70">
+              {{ budget().tauxConsommation }}%
+            </span>
+          </div>
+          <p class="text-xs text-slate-500 font-semibold uppercase tracking-wide">Dépenses Réelles</p>
+          <p class="text-2xl font-black text-slate-900 tabular-nums mt-1">{{ formatMontant(budget().totalReel) }}</p>
+          <div class="w-full bg-slate-100 rounded-full h-1.5 mt-3">
+            <div class="h-1.5 rounded-full transition-all"
+              [style.width.%]="budget().tauxConsommation"
+              [class.bg-emerald-500]="budget().tauxConsommation <= 70"
+              [class.bg-amber-400]="budget().tauxConsommation > 70 && budget().tauxConsommation <= 90"
+              [class.bg-red-500]="budget().tauxConsommation > 90"></div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+          <div class="p-2 bg-emerald-50 text-emerald-600 rounded-lg text-xl w-fit mb-3">⬆️</div>
+          <p class="text-xs text-slate-500 font-semibold uppercase tracking-wide">Total Recettes</p>
+          <p class="text-2xl font-black text-emerald-700 tabular-nums mt-1">{{ formatMontant(budget().totalRecettes) }}</p>
+        </div>
+        <div class="rounded-xl p-5 shadow-sm border-2"
+          [class.bg-emerald-50]="budget().ecart >= 0" [class.border-emerald-200]="budget().ecart >= 0"
+          [class.bg-red-50]="budget().ecart < 0" [class.border-red-200]="budget().ecart < 0">
+          <div class="text-xl mb-3">{{ budget().ecart >= 0 ? '✅' : '⚠️' }}</div>
+          <p class="text-xs font-semibold uppercase tracking-wide" [class.text-emerald-700]="budget().ecart >= 0" [class.text-red-700]="budget().ecart < 0">Écart Budgétaire</p>
+          <p class="text-2xl font-black tabular-nums mt-1" [class.text-emerald-800]="budget().ecart >= 0" [class.text-red-800]="budget().ecart < 0">
+            {{ budget().ecart >= 0 ? '+' : '' }}{{ formatMontant(budget().ecart) }}
+          </p>
+          <p class="text-xs mt-1" [class.text-emerald-600]="budget().ecart >= 0" [class.text-red-600]="budget().ecart < 0">
+            {{ budget().ecart >= 0 ? 'Sous le budget' : 'Dépassement détecté' }}
+          </p>
+        </div>
+      </div>
+
+      <!-- RÉPARTITION PAR CATÉGORIE -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-8">
+        <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider mb-5">Consommation par catégorie</h2>
+        <div class="space-y-4">
+          @for (cat of categories; track cat) {
+            @let info = parCategorie().get(cat);
+            @if (info) {
+              <div class="flex items-center gap-4">
+                <span class="text-lg w-7 text-center flex-shrink-0">{{ catIcon(cat) }}</span>
+                <div class="w-32 flex-shrink-0">
+                  <p class="text-xs font-semibold text-slate-700 truncate">{{ catLabel(cat) }}</p>
+                  <p class="text-[10px] text-slate-400">{{ info.count }} ligne(s)</p>
+                </div>
+                <div class="flex-1 h-3 bg-slate-100 rounded-full overflow-hidden">
+                  <div class="h-3 rounded-full transition-all"
+                    [style.width.%]="barWidth(info.reel, info.prevu)"
+                    [class.bg-emerald-500]="barWidth(info.reel, info.prevu) <= 70"
+                    [class.bg-amber-400]="barWidth(info.reel, info.prevu) > 70 && barWidth(info.reel, info.prevu) <= 90"
+                    [class.bg-red-500]="barWidth(info.reel, info.prevu) > 90">
+                  </div>
+                </div>
+                <div class="w-36 text-right flex-shrink-0">
+                  <p class="text-sm font-bold text-slate-900 tabular-nums">{{ formatMontant(info.reel) }}</p>
+                  <p class="text-[10px] text-slate-400">/ {{ formatMontant(info.prevu) }}</p>
+                </div>
+                <span class="w-10 text-right text-xs font-bold flex-shrink-0"
+                  [class.text-emerald-700]="barWidth(info.reel, info.prevu) <= 70"
+                  [class.text-amber-700]="barWidth(info.reel, info.prevu) > 70 && barWidth(info.reel, info.prevu) <= 90"
+                  [class.text-red-700]="barWidth(info.reel, info.prevu) > 90">
+                  {{ barWidth(info.reel, info.prevu) }}%
+                </span>
+              </div>
+            }
+          }
+        </div>
+      </div>
+
+      <!-- FILTRES + TABLEAU LIGNES -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="flex items-center gap-3 px-5 py-4 border-b border-slate-100 flex-wrap">
+          <div class="flex rounded-lg border border-slate-200 overflow-hidden text-xs font-bold">
+            @for (tab of [['tous','Tous'],['DEPENSE','Dépenses'],['RECETTE','Recettes']]; track tab[0]) {
+              <button (click)="typeFilter.set($any(tab[0]))"
+                class="px-3 py-2 transition-colors border-r border-slate-100 last:border-0"
+                [class.bg-primary]="typeFilter() === tab[0]" [class.text-white]="typeFilter() === tab[0]"
+                [class.text-slate-600]="typeFilter() !== tab[0]">{{ tab[1] }}</button>
+            }
+          </div>
+          <select class="border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 bg-white"
+            [ngModel]="catFilter()" (ngModelChange)="catFilter.set($event)">
+            <option value="toutes">Toutes les catégories</option>
+            @for (c of categories; track c) {
+              <option [value]="c">{{ catIcon(c) }} {{ catLabel(c) }}</option>
+            }
+          </select>
+          <span class="text-xs text-slate-500 ml-auto">{{ filteredLignes().length }} ligne(s)</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                <th class="px-5 py-3.5">Libellé</th>
+                <th class="px-5 py-3.5">Catégorie</th>
+                <th class="px-5 py-3.5 text-center">Type</th>
+                <th class="px-5 py-3.5 text-center">Mois</th>
+                <th class="px-5 py-3.5 text-right">Prévu</th>
+                <th class="px-5 py-3.5 text-right">Réel</th>
+                <th class="px-5 py-3.5 text-right">Écart</th>
+                <th class="px-5 py-3.5 text-center">Statut</th>
+                <th class="px-5 py-3.5 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              @if (!filteredLignes().length) {
+                <tr><td colspan="9" class="px-5 py-12 text-center text-slate-400">
+                  <p class="text-3xl mb-2">📭</p>
+                  <p class="font-semibold">Aucune ligne budgétaire</p>
+                </td></tr>
+              }
+              @for (l of filteredLignes(); track l.id) {
+                @let ecart = l.montantPrevu - (l.montantReel ?? 0);
+                <tr class="hover:bg-slate-50/70 transition-colors">
+                  <td class="px-5 py-3.5">
+                    <p class="font-semibold text-slate-900 text-sm">{{ l.libelle }}</p>
+                    @if (l.fournisseur) { <p class="text-xs text-slate-400 mt-0.5">{{ l.fournisseur }}</p> }
+                  </td>
+                  <td class="px-5 py-3.5">
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold" [class]="catColor(l.categorie)">
+                      {{ catIcon(l.categorie) }} {{ catLabel(l.categorie) }}
+                    </span>
+                  </td>
+                  <td class="px-5 py-3.5 text-center">
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      [class.bg-red-100]="l.type === 'DEPENSE'" [class.text-red-700]="l.type === 'DEPENSE'"
+                      [class.bg-emerald-100]="l.type === 'RECETTE'" [class.text-emerald-700]="l.type === 'RECETTE'">
+                      {{ l.type === 'DEPENSE' ? '⬇ Dépense' : '⬆ Recette' }}
+                    </span>
+                  </td>
+                  <td class="px-5 py-3.5 text-center text-xs text-slate-500">{{ l.mois ? moisLabel(l.mois) : '—' }}</td>
+                  <td class="px-5 py-3.5 text-right tabular-nums text-sm">{{ formatMontant(l.montantPrevu) }}</td>
+                  <td class="px-5 py-3.5 text-right tabular-nums text-sm font-bold"
+                    [class.text-emerald-700]="l.montantReel !== undefined"
+                    [class.text-slate-400]="l.montantReel === undefined">
+                    {{ l.montantReel !== undefined ? formatMontant(l.montantReel) : '—' }}
+                  </td>
+                  <td class="px-5 py-3.5 text-right tabular-nums text-sm font-bold"
+                    [class.text-emerald-700]="ecart >= 0 && l.montantReel !== undefined"
+                    [class.text-red-600]="ecart < 0"
+                    [class.text-slate-400]="l.montantReel === undefined">
+                    {{ l.montantReel !== undefined ? (ecart >= 0 ? '+' : '') + formatMontant(ecart) : '—' }}
+                  </td>
+                  <td class="px-5 py-3.5 text-center">
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full" [class]="statutColor(l.statut)">{{ l.statut }}</span>
+                  </td>
+                  <td class="px-5 py-3.5">
+                    <div class="flex items-center justify-center gap-2">
+                      <button (click)="openEdit(l)" class="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-primary transition-colors" title="Modifier">✏️</button>
+                      <button (click)="supprimer(l)" class="p-1.5 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-colors" title="Supprimer">🗑️</button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+            @if (filteredLignes().length > 0) {
+              <tfoot class="bg-slate-50 border-t-2 border-slate-200 font-bold text-sm">
+                <tr>
+                  <td class="px-5 py-4 text-slate-700" colspan="4">Total sélection</td>
+                  <td class="px-5 py-4 text-right tabular-nums">{{ formatMontant(totalFiltrePrevu()) }}</td>
+                  <td class="px-5 py-4 text-right tabular-nums text-emerald-700">{{ formatMontant(totalFiltreReel()) }}</td>
+                  <td class="px-5 py-4 text-right tabular-nums"
+                    [class.text-emerald-700]="totalFiltrePrevu() - totalFiltreReel() >= 0"
+                    [class.text-red-600]="totalFiltrePrevu() - totalFiltreReel() < 0">
+                    {{ totalFiltrePrevu() - totalFiltreReel() >= 0 ? '+' : '' }}{{ formatMontant(totalFiltrePrevu() - totalFiltreReel()) }}
+                  </td>
+                  <td colspan="2"></td>
+                </tr>
+              </tfoot>
+            }
+          </table>
+        </div>
+        <!-- Pagination controls -->
+        <div class="mt-4 flex items-center justify-between px-3 sm:px-6">
+          <div class="flex items-center gap-3">
+            <label class="text-xs text-slate-500">Afficher</label>
+            <select class="text-sm border rounded px-2 py-1" [ngModel]="pagination.pageSize()" (ngModelChange)="setPageSize($event)">
+              <option [ngValue]="5">5</option>
+              <option [ngValue]="10">10</option>
+              <option [ngValue]="20">20</option>
+              <option [ngValue]="50">50</option>
+            </select>
+            <span class="text-xs text-slate-500">résultats</span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button class="p-2 rounded border disabled:opacity-50" type="button" (click)="setPage(pagination.currentPage() - 1)" [disabled]="pagination.currentPage() <= 1" aria-label="Précédent">
+              <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12.293 16.293a1 1 0 0 1-1.414 0L5.586 11l5.293-5.293a1 1 0 0 1 1.414 1.414L8.414 11l3.879 3.879a1 1 0 0 1 0 1.414z" clip-rule="evenodd"/></svg>
+            </button>
+            <span class="text-sm">Page {{ pagination.currentPage() }} / {{ pagination.totalPages() }}</span>
+            <button class="p-2 rounded border disabled:opacity-50" type="button" (click)="setPage(pagination.currentPage() + 1)" [disabled]="pagination.currentPage() >= pagination.totalPages()" aria-label="Suivant">
+              <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.707 3.707a1 1 0 0 1 0 1.414L11.586 11l-3.879 3.879a1 1 0 1 1-1.414-1.414L8.586 11 6.293 8.707a1 1 0 0 1 0-1.414z" clip-rule="evenodd"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+</div>
+
+<!-- MODAL LIGNE BUDGET -->
+@if (showModal()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" (click)="closeModal()">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg" (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900">{{ editId() ? 'Modifier la ligne' : 'Nouvelle ligne budgétaire' }}</h2>
+        <button (click)="closeModal()" class="size-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500">✕</button>
+      </div>
+      <form [formGroup]="form" class="p-6 space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Type *</label>
+            <select formControlName="type" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+              <option value="DEPENSE">⬇ Dépense</option>
+              <option value="RECETTE">⬆ Recette</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Catégorie *</label>
+            <select formControlName="categorie" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+              @for (c of categories; track c) { <option [value]="c">{{ catIcon(c) }} {{ catLabel(c) }}</option> }
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Libellé *</label>
+          <input type="text" formControlName="libelle" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder="Description de la ligne budgétaire" />
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Montant Prévu (DT) *</label>
+            <input type="number" formControlName="montantPrevu" min="0" step="0.01" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Montant Réel (DT)</label>
+            <input type="number" formControlName="montantReel" min="0" step="0.01" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Statut *</label>
+            <select formControlName="statut" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+              @for (s of statuts; track s) { <option [value]="s">{{ s }}</option> }
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Mois</label>
+            <select formControlName="mois" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+              <option [ngValue]="null">—</option>
+              @for (m of [1,2,3,4,5,6,7,8,9,10,11,12]; track m) { <option [value]="m">{{ moisLabel(m) }}</option> }
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">Fournisseur</label>
+          <input type="text" formControlName="fournisseur" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" placeholder="Nom du fournisseur ou prestataire" />
+        </div>
+        <div class="flex justify-between pt-2 border-t border-slate-100">
+          <button type="button" (click)="closeModal()" class="px-4 py-2 border border-slate-200 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">Annuler</button>
+          <button type="button" (click)="submit()" [disabled]="!form.valid || saving()"
+            class="px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 disabled:opacity-40 transition-colors">
+            @if (saving()) { ⏳ Enregistrement… } @else { 💾 Enregistrer }
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

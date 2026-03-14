@@ -1,0 +1,279 @@
+<div class="layout-container flex h-full flex-col">
+
+  <main class="flex-1 overflow-y-auto px-6 lg:px-20 py-8">
+    <div class="max-w-[1200px] mx-auto">
+      <!-- En-tête de page -->
+      <div class="mb-8">
+        <h1 class="text-3xl font-black text-slate-900 dark:text-white mb-2">Génération des dettes</h1>
+        <p class="text-slate-600 dark:text-slate-400">Automatisez la création des loyers et charges pour vos cycles de facturation.</p>
+      </div>
+
+      <!-- Message d'erreur global -->
+      @if (erreur(); as errorMessage) {
+        <div class="mb-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined">error</span>
+            <span>{{ errorMessage }}</span>
+          </div>
+        </div>
+      }
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <!-- Colonne gauche : Actions -->
+        <div class="lg:col-span-5 space-y-6">
+          <!-- Carte génération mensuelle -->
+          <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+              <h3 class="font-bold text-lg flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">calendar_month</span>
+                Génération Mensuelle
+              </h3>
+              <span class="bg-primary/10 text-primary text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">Récurrent</span>
+            </div>
+            <div class="p-6 space-y-6">
+              <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-2">
+                  <label class="text-xs font-bold text-slate-500 uppercase">Mois de référence</label>
+                  <select 
+                    class="w-full rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:ring-primary focus:border-primary"
+                    [(ngModel)]="mois">
+                    @for (m of moisListe; track m.numero) {
+                      <option [value]="m.numero">{{ m.nom }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="space-y-2">
+                  <label class="text-xs font-bold text-slate-500 uppercase">Année</label>
+                  <input 
+                    class="w-full rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:ring-primary focus:border-primary" 
+                    type="number" 
+                    [(ngModel)]="annee"
+                    [min]="2020"
+                    [max]="2035"/>
+                </div>
+              </div>
+              
+              <button 
+                class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                (click)="genererMois()"
+                [disabled]="isGenerating()">
+                <span class="material-symbols-outlined">bolt</span>
+                {{ isGenerating() ? 'Génération en cours...' : 'Lancer la génération mensuelle' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Carte génération annuelle -->
+          <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+              <h3 class="font-bold text-lg flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">event_repeat</span>
+                Génération Annuelle
+              </h3>
+              <span class="bg-slate-100 dark:bg-slate-800 text-slate-500 text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">Annuel</span>
+            </div>
+            <div class="p-6 space-y-4">
+              <div class="space-y-2">
+                <label class="text-xs font-bold text-slate-500 uppercase">Exercice fiscal</label>
+                <select 
+                  class="w-full rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:ring-primary focus:border-primary"
+                  [(ngModel)]="anneeAnnuelle">
+                  <option [value]="2023">2023</option>
+                  <option [value]="2024">2024</option>
+                  <option [value]="2025">2025</option>
+                  <option [value]="2026">2026</option>
+                </select>
+              </div>
+              <button 
+                class="w-full bg-white border-2 border-primary text-primary hover:bg-primary/5 font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                (click)="genererAnnee()"
+                [disabled]="isGenerating()">
+                Lancer la génération annuelle
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Colonne droite : Résultats -->
+        <div class="lg:col-span-7 space-y-6">
+          <!-- Résultat mensuel -->
+          @if (resultatMois(); as resultat) {
+            <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+              <div class="p-6 border-b border-slate-100 dark:border-slate-800">
+                <h3 class="font-bold text-lg">Résultat de la dernière opération</h3>
+                <p class="text-sm text-slate-500">Cycle : {{ moisListe[mois-1].nom }} {{ annee }}</p>
+              </div>
+              <div class="p-6">
+                <!-- KPIs -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                  <div class="p-4 rounded-xl bg-primary/5 border border-primary/10">
+                    <p class="text-[10px] font-black text-primary uppercase tracking-tighter mb-1">Dettes générées</p>
+                    <p class="text-2xl font-black text-slate-900 dark:text-white">{{ resultat.nombreDettesCrees }}</p>
+                  </div>
+                  <div class="p-4 rounded-xl bg-primary/5 border border-primary/10">
+                    <p class="text-[10px] font-black text-primary uppercase tracking-tighter mb-1">Charges traitées</p>
+                    <p class="text-2xl font-black text-slate-900 dark:text-white">{{ resultat.chargesTraitees }}</p>
+                  </div>
+                  @if (resultat.chargesSansCreation.length) {
+                    <div class="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                      <div class="flex items-center gap-1 mb-1">
+                        <p class="text-[10px] font-black text-amber-700 dark:text-amber-400 uppercase tracking-tighter">Sans création</p>
+                        <span class="material-symbols-outlined text-xs text-amber-600">warning</span>
+                      </div>
+                      <p class="text-2xl font-black text-amber-700 dark:text-amber-400">{{ resultat.chargesSansCreation.length }}</p>
+                    </div>
+                  }
+                  @if (resultat.erreurs.length) {
+                    <div class="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                      <div class="flex items-center gap-1 mb-1">
+                        <p class="text-[10px] font-black text-red-700 dark:text-red-400 uppercase tracking-tighter">Erreurs</p>
+                        <span class="material-symbols-outlined text-xs text-red-600">error</span>
+                      </div>
+                      <p class="text-2xl font-black text-red-700 dark:text-red-400">{{ resultat.erreurs.length }}</p>
+                    </div>
+                  }
+                </div>
+
+                <!-- Journal d'exécution -->
+                <div class="space-y-3">
+                  <h4 class="text-sm font-bold text-slate-700 dark:text-slate-300">Journal d'exécution détaillé</h4>
+                  <div class="space-y-2 max-h-[240px] overflow-y-auto pr-2 custom-scrollbar">
+                    @if (resultat.dejaGenere) {
+                      <div class="flex items-start gap-3 p-3 rounded-lg border border-amber-100 dark:border-amber-900/30 bg-amber-50/30 dark:bg-amber-900/10">
+                        <span class="material-symbols-outlined text-amber-500 mt-0.5">info</span>
+                        <div>
+                          <p class="text-sm font-semibold text-amber-800 dark:text-amber-400">Période déjà générée</p>
+                          <p class="text-xs text-amber-700/70 dark:text-amber-400/70">Des dettes existaient déjà pour cette période, aucune nouvelle dette créée.</p>
+                        </div>
+                      </div>
+                    }
+                    
+                    @for (err of resultat.erreurs; track err.charge) {
+                      <div class="flex items-start gap-3 p-3 rounded-lg border border-red-100 dark:border-red-900/30 bg-red-50/30 dark:bg-red-900/10">
+                        <span class="material-symbols-outlined text-red-500 mt-0.5">error_outline</span>
+                        <div>
+                          <p class="text-sm font-semibold text-red-800 dark:text-red-400">Erreur : {{ err.charge }}</p>
+                          <p class="text-xs text-red-700/70 dark:text-red-400/70">{{ err.erreur }}</p>
+                        </div>
+                      </div>
+                    }
+                    
+                    @for (charge of resultat.chargesSansCreation; track charge) {
+                      <div class="flex items-start gap-3 p-3 rounded-lg border border-amber-100 dark:border-amber-900/30 bg-amber-50/30 dark:bg-amber-900/10">
+                        <span class="material-symbols-outlined text-amber-500 mt-0.5">report_problem</span>
+                        <div>
+                          <p class="text-sm font-semibold text-amber-800 dark:text-amber-400">Charge sans création</p>
+                          <p class="text-xs text-amber-700/70 dark:text-amber-400/70">{{ charge }}</p>
+                        </div>
+                      </div>
+                    }
+                    
+                    @if (resultat.nombreDettesCrees > 0) {
+                      <div class="flex items-start gap-3 p-3 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
+                        <span class="material-symbols-outlined text-emerald-500 mt-0.5">check_circle_outline</span>
+                        <div>
+                          <p class="text-sm font-semibold text-slate-700 dark:text-slate-300">Génération réussie</p>
+                          <p class="text-xs text-slate-500">{{ resultat.nombreDettesCrees }} dette(s) créée(s) sans incident.</p>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Résultat annuel -->
+          @if (resultatAnnee(); as resultatAnnuel) {
+            <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+              <div class="p-6 border-b border-slate-100 dark:border-slate-800">
+                <h3 class="font-bold text-lg">Résultat génération annuelle {{ anneeAnnuelle }}</h3>
+                <p class="text-sm text-slate-500">Total dettes créées : {{ resultatAnnuel.totalDettesCrees }}</p>
+              </div>
+              <div class="p-6">
+                <h4 class="text-sm font-bold text-slate-700 dark:text-slate-300 mb-4">Résultats par mois</h4>
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  @for (mois of moisListe; track mois.numero) {
+                    @let res = resultatAnnuel.resultatsParMois[mois.numero];
+                    <div class="p-3 rounded-lg border" 
+                      [class.border-emerald-200]="res && res.success && !res.erreurs.length"
+                      [class.border-amber-200]="res && res.dejaGenere"
+                      [class.border-red-200]="res && res.erreurs.length"
+                      [class.bg-slate-50]="!res">
+                      <div class="font-bold text-sm">{{ mois.nom }}</div>
+                      @if (res) {
+                        <div class="text-xs mt-1 space-y-1">
+                          <span class="text-emerald-600 font-medium">{{ res.nombreDettesCrees }} dette(s)</span>
+                          @if (res.dejaGenere) {
+                            <div class="text-amber-600 flex items-center gap-1">
+                              <span class="material-symbols-outlined text-xs">check_circle</span>
+                              Déjà généré
+                            </div>
+                          }
+                          @if (res.erreurs.length) {
+                            <div class="text-red-600 flex items-center gap-1">
+                              <span class="material-symbols-outlined text-xs">error</span>
+                              {{ res.erreurs.length }} erreur(s)
+                            </div>
+                          }
+                        </div>
+                      } @else {
+                        <div class="text-xs text-slate-400 mt-1">Non généré</div>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Section d'information -->
+          <div class="bg-primary/5 dark:bg-slate-800/40 rounded-xl p-6 border border-primary/10">
+            <h3 class="font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-4">
+              <span class="material-symbols-outlined text-primary">info</span>
+              Principes de génération
+            </h3>
+            <ul class="space-y-4">
+              <li class="flex gap-3">
+                <div class="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <span class="text-[10px] font-bold text-primary">1</span>
+                </div>
+                <p class="text-sm text-slate-600 dark:text-slate-400">
+                  <strong class="text-slate-900 dark:text-slate-200">Montants figés :</strong> Une fois générée, la dette conserve les tarifs en vigueur au moment de l'exécution.
+                </p>
+              </li>
+              <li class="flex gap-3">
+                <div class="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <span class="text-[10px] font-bold text-primary">2</span>
+                </div>
+                <p class="text-sm text-slate-600 dark:text-slate-400">
+                  <strong class="text-slate-900 dark:text-slate-200">Charges actives :</strong> Seules les charges actives et respectant la fréquence sont incluses.
+                </p>
+              </li>
+              <li class="flex gap-3">
+                <div class="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <span class="text-[10px] font-bold text-primary">3</span>
+                </div>
+                <p class="text-sm text-slate-600 dark:text-slate-400">
+                  <strong class="text-slate-900 dark:text-slate-200">Prévention des doublons :</strong> Le système empêche toute double génération pour un même couple [Mois/Appartement/Charge].
+                </p>
+              </li>
+              <li class="flex gap-3">
+                <div class="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <span class="text-[10px] font-bold text-primary">4</span>
+                </div>
+                <p class="text-sm text-slate-600 dark:text-slate-400">
+                  <strong class="text-slate-900 dark:text-slate-200">Répartition :</strong> La répartition respecte le mode de chaque charge (tantièmes, surface, compteur).
+                </p>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="mt-auto px-6 lg:px-20 py-6 border-t border-slate-200 dark:border-slate-800 text-center">
+    <p class="text-xs text-slate-500">© 2024 Système de Gestion des Dettes V3.1.2 - Tous droits réservés.</p>
+  </footer>
+</div>

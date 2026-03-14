@@ -1,0 +1,8 @@
+<div class="p-4">
+  <h3 class="text-lg font-bold">Détails Immeuble</h3>
+  <p *ngIf="!id">Aucun immeuble sélectionné.</p>
+  <div *ngIf="id">
+    <p>ID: {{ id }}</p>
+    <!-- TODO: charger et afficher les détails via Immeuble service -->
+  </div>
+</div>

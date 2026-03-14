@@ -1,0 +1,556 @@
+<div class="min-h-screen bg-slate-50 dark:bg-slate-950">
+<div class="max-w-[1100px] mx-auto px-4 lg:px-8 py-8">
+
+  <!-- ══ HEADER ══ -->
+  <div class="mb-8">
+    <p class="text-xs font-bold text-primary uppercase tracking-widest mb-1">Administration</p>
+    <h1 class="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">⚙️ Paramètres</h1>
+    <p class="text-slate-500 dark:text-slate-400 mt-1 text-sm">Personnalisez votre expérience SyndicPro</p>
+  </div>
+
+  <div class="flex gap-6 flex-col lg:flex-row">
+
+    <!-- ══ SIDEBAR ONGLETS ══ -->
+    <aside class="lg:w-56 shrink-0">
+      <nav class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        @for (tab of [
+          { id:'apparence',     icon:'🎨', label:'Apparence'      },
+          { id:'notifications', icon:'🔔', label:'Notifications'  },
+          { id:'langue',        icon:'🌐', label:'Langue & Format'},
+          { id:'securite',      icon:'🔒', label:'Sécurité'       },
+          { id:'avance',        icon:'🔧', label:'Avancé'         }
+        ]; track tab.id) {
+          <button (click)="activeTab.set($any(tab.id))"
+            class="w-full flex items-center gap-3 px-4 py-3.5 text-sm font-semibold text-left transition-all border-b border-slate-100 dark:border-slate-800 last:border-0"
+            [class.bg-primary]="activeTab() === tab.id"
+            [class.text-white]="activeTab() === tab.id"
+            [class.text-slate-600]="activeTab() !== tab.id"
+            [class.dark:text-slate-400]="activeTab() !== tab.id"
+            [class.hover:bg-slate-50]="activeTab() !== tab.id"
+            [class.dark:hover:bg-slate-800]="activeTab() !== tab.id">
+            <span class="text-base">{{ tab.icon }}</span>
+            <span>{{ tab.label }}</span>
+            @if (activeTab() === tab.id) {
+              <span class="ml-auto text-white/60 text-xs">›</span>
+            }
+          </button>
+        }
+      </nav>
+
+      <!-- Bouton sauvegarder -->
+      <button (click)="saveSettings()" [disabled]="saving()"
+        class="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary/90 disabled:opacity-50 shadow-lg shadow-primary/20 transition-all">
+        @if (saving()) {
+          <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          Sauvegarde…
+        } @else if (saved()) {
+          ✅ Sauvegardé !
+        } @else {
+          💾 Sauvegarder
+        }
+      </button>
+    </aside>
+
+    <!-- ══ CONTENU ══ -->
+    <div class="flex-1 space-y-5">
+
+      <!-- ─────────────────────────── APPARENCE ─────────────────────────── -->
+      @if (activeTab() === 'apparence') {
+
+        <!-- Thème -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+          <h2 class="text-base font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">☀️ Thème d'affichage</h2>
+          <p class="text-xs text-slate-400 mb-5">Choisissez entre clair, sombre ou automatique selon votre système.</p>
+          <div class="grid grid-cols-3 gap-3">
+            @for (t of themes; track t.val) {
+              <button (click)="setTheme(t.val)"
+                class="flex flex-col items-center gap-2.5 p-4 rounded-xl border-2 transition-all"
+                [class.border-primary]="settings().theme === t.val"
+                [class.bg-primary]="settings().theme === t.val"
+                [class.text-white]="settings().theme === t.val"
+                [class.border-slate-200]="settings().theme !== t.val"
+                [class.dark:border-slate-700]="settings().theme !== t.val"
+                [class.hover:border-primary]="settings().theme !== t.val"
+                [class.text-slate-600]="settings().theme !== t.val"
+                [class.dark:text-slate-300]="settings().theme !== t.val">
+                <span class="text-2xl">{{ t.icon }}</span>
+                <span class="text-xs font-bold">{{ t.label }}</span>
+                <span class="text-[10px]" [class.opacity-70]="settings().theme === t.val" [class.text-slate-400]="settings().theme !== t.val">{{ t.desc }}</span>
+              </button>
+            }
+          </div>
+        </section>
+
+        <!-- Couleur d'accent -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+          <h2 class="text-base font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">🎨 Couleur principale</h2>
+          <p class="text-xs text-slate-400 mb-5">Couleur des boutons, liens et éléments d'accentuation de l'interface.</p>
+          <div class="flex gap-4 flex-wrap">
+            @for (a of accents; track a.val) {
+              <button (click)="setAccent(a.val)"
+                class="flex flex-col items-center gap-2 group">
+                <div class="size-10 rounded-full transition-all ring-offset-2 ring-offset-white dark:ring-offset-slate-900"
+                     [class]="a.bg"
+                     [class.ring-2]="settings().accent === a.val"
+                     [class]="settings().accent === a.val ? a.ring : ''">
+                  @if (settings().accent === a.val) {
+                    <span class="flex items-center justify-center h-full text-white text-lg">✓</span>
+                  }
+                </div>
+                <span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400">{{ a.label }}</span>
+              </button>
+            }
+          </div>
+        </section>
+
+        <!-- Taille du texte -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+          <h2 class="text-base font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">🔠 Taille du texte</h2>
+          <p class="text-xs text-slate-400 mb-5">Ajuste la taille de base de tous les textes de l'application.</p>
+          <div class="flex gap-3">
+            @for (f of fontSizes; track f.val) {
+              <button (click)="setFontSize(f.val)"
+                class="flex-1 flex flex-col items-center gap-1.5 px-4 py-3.5 rounded-xl border-2 transition-all"
+                [class.border-primary]="settings().fontSize === f.val"
+                [class.bg-primary]="settings().fontSize === f.val"
+                [class.text-white]="settings().fontSize === f.val"
+                [class.border-slate-200]="settings().fontSize !== f.val"
+                [class.dark:border-slate-700]="settings().fontSize !== f.val"
+                [class.text-slate-600]="settings().fontSize !== f.val"
+                [class.dark:text-slate-300]="settings().fontSize !== f.val">
+                <span [style.font-size]="f.px" class="font-bold">Aa</span>
+                <span class="text-[10px] font-semibold">{{ f.label }}</span>
+              </button>
+            }
+          </div>
+        </section>
+
+        <!-- Animations & Mode compact -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+          <h2 class="text-base font-bold text-slate-900 dark:text-white mb-5 flex items-center gap-2">✨ Comportement</h2>
+          <div class="space-y-4">
+
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-semibold text-slate-700 dark:text-slate-300">Animations & transitions</p>
+                <p class="text-xs text-slate-400 mt-0.5">Effets visuels lors des interactions</p>
+              </div>
+              <button (click)="settings.update(s => ({...s, animations: !s.animations}))"
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                [class.bg-primary]="settings().animations"
+                [class.bg-slate-200]="!settings().animations"
+                [class.dark:bg-slate-700]="!settings().animations">
+                <span class="inline-block size-4 transform rounded-full bg-white shadow-md transition-transform"
+                      [class.translate-x-6]="settings().animations"
+                      [class.translate-x-1]="!settings().animations"></span>
+              </button>
+            </div>
+
+            <div class="border-t border-slate-100 dark:border-slate-800 pt-4 flex items-center justify-between">
+              <div>
+                <p class="text-sm font-semibold text-slate-700 dark:text-slate-300">Mode compact</p>
+                <p class="text-xs text-slate-400 mt-0.5">Réduit l'espacement pour afficher plus de données</p>
+              </div>
+              <button (click)="settings.update(s => ({...s, compact: !s.compact}))"
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                [class.bg-primary]="settings().compact"
+                [class.bg-slate-200]="!settings().compact"
+                [class.dark:bg-slate-700]="!settings().compact">
+                <span class="inline-block size-4 transform rounded-full bg-white shadow-md transition-transform"
+                      [class.translate-x-6]="settings().compact"
+                      [class.translate-x-1]="!settings().compact"></span>
+              </button>
+            </div>
+
+          </div>
+        </section>
+      }
+
+      <!-- ─────────────────────────── NOTIFICATIONS ─────────────────────── -->
+      @if (activeTab() === 'notifications') {
+
+        <!-- Email -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+          <div class="flex items-center justify-between mb-5">
+            <div>
+              <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">📧 Notifications Email</h2>
+              <p class="text-xs text-slate-400 mt-1">Alertes envoyées à votre adresse email</p>
+            </div>
+            <button (click)="toggleAllEmail(!allEmailOn)"
+              class="text-xs font-bold px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-primary hover:text-primary transition-colors">
+              {{ allEmailOn ? 'Tout désactiver' : 'Tout activer' }}
+            </button>
+          </div>
+          <div class="space-y-4">
+            @for (item of [
+              { key:'emailPaiements', label:'Confirmations de paiement', desc:'Quand un paiement est reçu ou validé' },
+              { key:'emailRelances',  label:'Relances impayés',          desc:'Rappels automatiques pour les copropriétaires' },
+              { key:'emailReunions',  label:'Convocations de réunions',  desc:'Invitations et rappels de réunions' },
+              { key:'emailRapports',  label:'Rapports mensuels',         desc:'Résumé financier mensuel automatique' }
+            ]; track item.key) {
+              <div class="flex items-center justify-between py-2">
+                <div>
+                  <p class="text-sm font-semibold text-slate-700 dark:text-slate-300">{{ item.label }}</p>
+                  <p class="text-xs text-slate-400 mt-0.5">{{ item.desc }}</p>
+                </div>
+                <button (click)="updateNotif($any(item.key), !getNotifBool(item.key))"
+                  class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ml-4"
+                  [class.bg-primary]="getNotifBool(item.key)"
+                  [class.bg-slate-200]="!getNotifBool(item.key)"
+                  [class.dark:bg-slate-700]="!getNotifBool(item.key)">
+                  <span class="inline-block size-4 transform rounded-full bg-white shadow-md transition-transform"
+                        [class.translate-x-6]="getNotifBool(item.key)"
+                        [class.translate-x-1]="!getNotifBool(item.key)"></span>
+                </button>
+              </div>
+              @if (!$last) { <div class="border-b border-slate-100 dark:border-slate-800"></div> }
+            }
+          </div>
+        </section>
+
+        <!-- Push / In-app -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+          <div class="flex items-center justify-between mb-5">
+            <div>
+              <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">🔔 Notifications Push</h2>
+              <p class="text-xs text-slate-400 mt-1">Alertes dans l'application et sur votre navigateur</p>
+            </div>
+            <button (click)="toggleAllPush(!allPushOn)"
+              class="text-xs font-bold px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-primary hover:text-primary transition-colors">
+              {{ allPushOn ? 'Tout désactiver' : 'Tout activer' }}
+            </button>
+          </div>
+          <div class="space-y-4">
+            @for (item of [
+              { key:'pushPaiements', label:'Paiements reçus',   desc:'Alerte immédiate à chaque paiement' },
+              { key:'pushRelances',  label:'Relances envoyées', desc:'Confirmation d\'envoi de relances' },
+              { key:'pushReunions',  label:'Rappels réunions',  desc:'Rappel 24h avant chaque réunion' }
+            ]; track item.key) {
+              <div class="flex items-center justify-between py-2">
+                <div>
+                  <p class="text-sm font-semibold text-slate-700 dark:text-slate-300">{{ item.label }}</p>
+                  <p class="text-xs text-slate-400 mt-0.5">{{ item.desc }}</p>
+                </div>
+                <button (click)="updateNotif($any(item.key), !getNotifBool(item.key))"
+                  class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ml-4"
+                  [class.bg-primary]="getNotifBool(item.key)"
+                  [class.bg-slate-200]="!getNotifBool(item.key)"
+                  [class.dark:bg-slate-700]="!getNotifBool(item.key)">
+                  <span class="inline-block size-4 transform rounded-full bg-white shadow-md transition-transform"
+                        [class.translate-x-6]="getNotifBool(item.key)"
+                        [class.translate-x-1]="!getNotifBool(item.key)"></span>
+                </button>
+              </div>
+              @if (!$last) { <div class="border-b border-slate-100 dark:border-slate-800"></div> }
+            }
+          </div>
+        </section>
+
+        <!-- Fréquence relances -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+          <h2 class="text-base font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">⏱️ Fréquence des relances</h2>
+          <p class="text-xs text-slate-400 mb-5">À quelle fréquence envoyer les relances aux copropriétaires impayés</p>
+          <div class="grid grid-cols-3 gap-3">
+            @for (f of [
+              {val:'immediate',    label:'Immédiate',    icon:'⚡'},
+              {val:'quotidienne',  label:'Quotidienne',  icon:'📅'},
+              {val:'hebdomadaire', label:'Hebdomadaire', icon:'🗓️'}
+            ]; track f.val) {
+              <button (click)="updateNotif('freqRelance', $any(f.val))"
+                class="flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center"
+                [class.border-primary]="settings().notifs.freqRelance === f.val"
+                [class.bg-primary]="settings().notifs.freqRelance === f.val"
+                [class.text-white]="settings().notifs.freqRelance === f.val"
+                [class.border-slate-200]="settings().notifs.freqRelance !== f.val"
+                [class.dark:border-slate-700]="settings().notifs.freqRelance !== f.val"
+                [class.text-slate-600]="settings().notifs.freqRelance !== f.val"
+                [class.dark:text-slate-300]="settings().notifs.freqRelance !== f.val">
+                <span class="text-xl">{{ f.icon }}</span>
+                <span class="text-xs font-bold">{{ f.label }}</span>
+              </button>
+            }
+          </div>
+          <div class="mt-4">
+            <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Heure d'envoi des push</label>
+            <input type="time" [ngModel]="settings().notifs.heurePush"
+                   (ngModelChange)="updateNotif('heurePush', $event)"
+                   class="border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/30 w-40">
+          </div>
+        </section>
+      }
+
+      <!-- ─────────────────────────── LANGUE & FORMAT ─────────────────────── -->
+      @if (activeTab() === 'langue') {
+
+        <!-- Langue -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+          <h2 class="text-base font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">🌐 Langue de l'interface</h2>
+          <p class="text-xs text-slate-400 mb-5">Définit la langue utilisée dans tous les menus, labels et messages.</p>
+          <div class="space-y-2">
+            @for (lang of languages; track lang.val) {
+              <button (click)="setLanguage(lang.val)"
+                class="w-full flex items-center gap-4 px-5 py-4 rounded-xl border-2 transition-all text-left"
+                [class.border-primary]="settings().langue === lang.val"
+                [class.bg-primary]="settings().langue === lang.val"
+                [class.text-white]="settings().langue === lang.val"
+                [class.border-slate-200]="settings().langue !== lang.val"
+                [class.dark:border-slate-700]="settings().langue !== lang.val"
+                [class.hover:border-primary]="settings().langue !== lang.val">
+                <span class="text-2xl">{{ lang.flag }}</span>
+                <div class="flex-1">
+                  <p class="font-bold text-sm" [class.text-white]="settings().langue === lang.val" [class.text-slate-800]="settings().langue !== lang.val" [class.dark:text-slate-200]="settings().langue !== lang.val">{{ lang.label }}</p>
+                  <p class="text-xs mt-0.5" [class.text-white/70]="settings().langue === lang.val" [class.text-slate-400]="settings().langue !== lang.val">{{ lang.native }}</p>
+                </div>
+                @if (settings().langue === lang.val) {
+                  <span class="text-white text-lg">✓</span>
+                }
+              </button>
+            }
+          </div>
+          @if (settings().langue === 'ar') {
+            <div class="mt-4 flex items-center gap-2 text-xs text-amber-700 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-3">
+              <span>⚠️</span> Le mode RTL sera activé pour l'arabe. Certains composants tiers peuvent ne pas supporter pleinement ce mode.
+            </div>
+          }
+        </section>
+
+        <!-- Format de date -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+          <h2 class="text-base font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">📅 Format des dates</h2>
+          <p class="text-xs text-slate-400 mb-5">Comment les dates sont affichées dans l'application.</p>
+          <div class="grid grid-cols-3 gap-3">
+            @for (f of dateFormats; track f.val) {
+              <button (click)="settings.update(s => ({...s, dateFmt: f.val}))"
+                class="flex flex-col items-center gap-1.5 px-3 py-4 rounded-xl border-2 transition-all text-center"
+                [class.border-primary]="settings().dateFmt === f.val"
+                [class.bg-primary]="settings().dateFmt === f.val"
+                [class.text-white]="settings().dateFmt === f.val"
+                [class.border-slate-200]="settings().dateFmt !== f.val"
+                [class.dark:border-slate-700]="settings().dateFmt !== f.val"
+                [class.text-slate-600]="settings().dateFmt !== f.val"
+                [class.dark:text-slate-300]="settings().dateFmt !== f.val">
+                <span class="text-xs font-bold">{{ f.label }}</span>
+                <span class="text-[10px]" [class.opacity-75]="settings().dateFmt === f.val" [class.text-slate-400]="settings().dateFmt !== f.val">ex: {{ f.example }}</span>
+              </button>
+            }
+          </div>
+        </section>
+
+        <!-- Devise -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+          <h2 class="text-base font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">💰 Devise d'affichage</h2>
+          <p class="text-xs text-slate-400 mb-5">Symbole utilisé pour l'affichage des montants.</p>
+          <div class="flex gap-3">
+            @for (c of currencies; track c.val) {
+              <button (click)="settings.update(s => ({...s, currency: c.val}))"
+                class="flex-1 flex flex-col items-center gap-1.5 py-4 rounded-xl border-2 transition-all"
+                [class.border-primary]="settings().currency === c.val"
+                [class.bg-primary]="settings().currency === c.val"
+                [class.text-white]="settings().currency === c.val"
+                [class.border-slate-200]="settings().currency !== c.val"
+                [class.dark:border-slate-700]="settings().currency !== c.val"
+                [class.text-slate-600]="settings().currency !== c.val"
+                [class.dark:text-slate-300]="settings().currency !== c.val">
+                <span class="text-2xl font-black">{{ c.symbol }}</span>
+                <span class="text-xs font-bold">{{ c.val }}</span>
+              </button>
+            }
+          </div>
+        </section>
+      }
+
+      <!-- ─────────────────────────── SÉCURITÉ ─────────────────────────── -->
+      @if (activeTab() === 'securite') {
+
+        <!-- Changement mot de passe -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+          <h2 class="text-base font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">🔑 Changer le mot de passe</h2>
+          <p class="text-xs text-slate-400 mb-6">Utilisez un mot de passe fort d'au moins 8 caractères avec majuscules, chiffres et symboles.</p>
+
+          <div class="space-y-4 max-w-md">
+
+            <!-- Mot de passe actuel -->
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Mot de passe actuel</label>
+              <div class="relative">
+                <input [type]="showPwCurrent() ? 'text' : 'password'"
+                       [ngModel]="pwCurrent()" (ngModelChange)="pwCurrent.set($event)"
+                       placeholder="••••••••"
+                       class="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 pr-10 text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/30">
+                <button type="button" (click)="showPwCurrent.set(!showPwCurrent())"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+                  {{ showPwCurrent() ? '🙈' : '👁️' }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Nouveau mot de passe -->
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nouveau mot de passe</label>
+              <div class="relative">
+                <input [type]="showPwNew() ? 'text' : 'password'"
+                       [ngModel]="pwNew()" (ngModelChange)="pwNew.set($event)"
+                       placeholder="••••••••"
+                       class="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 pr-10 text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/30">
+                <button type="button" (click)="showPwNew.set(!showPwNew())"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+                  {{ showPwNew() ? '🙈' : '👁️' }}
+                </button>
+              </div>
+              <!-- Barre de force -->
+              @if (pwNew()) {
+                <div class="mt-2">
+                  <div class="flex justify-between items-center mb-1">
+                    <span class="text-[10px] text-slate-400">Force du mot de passe</span>
+                    <span class="text-[10px] font-bold" [class.text-red-500]="pwStrength().pct < 50" [class.text-amber-500]="pwStrength().pct === 66" [class.text-emerald-600]="pwStrength().pct === 100">{{ pwStrength().label }}</span>
+                  </div>
+                  <div class="h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full transition-all" [class]="pwStrength().color" [style.width.%]="pwStrength().pct"></div>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- Confirmer -->
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Confirmer le mot de passe</label>
+              <input type="password" [ngModel]="pwConfirm()" (ngModelChange)="pwConfirm.set($event)"
+                     placeholder="••••••••"
+                     class="w-full border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                     [class.border-red-400]="pwConfirm() && pwNew() !== pwConfirm()"
+                     [class.border-emerald-400]="pwConfirm() && pwNew() === pwConfirm()">
+              @if (pwConfirm() && pwNew() !== pwConfirm()) {
+                <p class="text-[10px] text-red-500 mt-1">Les mots de passe ne correspondent pas</p>
+              }
+            </div>
+
+            <!-- Erreur & bouton -->
+            @if (pwError()) {
+              <div class="flex items-center gap-2 text-xs text-red-700 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3">
+                <span>⚠️</span> {{ pwError() }}
+              </div>
+            }
+
+            @if (pwSaved()) {
+              <div class="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
+                <span>✅</span> Mot de passe modifié avec succès
+              </div>
+            }
+
+            <button (click)="changePassword()" [disabled]="pwSaving() || !pwCurrent() || !pwNew() || !pwConfirm()"
+              class="w-full flex items-center justify-center gap-2 py-2.5 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
+              @if (pwSaving()) {
+                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Modification…
+              } @else {
+                🔑 Modifier le mot de passe
+              }
+            </button>
+          </div>
+        </section>
+
+        <!-- Déconnexion automatique -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+          <h2 class="text-base font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">⏰ Déconnexion automatique</h2>
+          <p class="text-xs text-slate-400 mb-5">Se déconnecter automatiquement après une période d'inactivité.</p>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            @for (opt of autoLogoutOptions; track opt.val) {
+              <button (click)="settings.update(s => ({...s, autoLogout: opt.val}))"
+                class="flex flex-col items-center gap-1 py-3.5 px-3 rounded-xl border-2 transition-all text-sm font-bold"
+                [class.border-primary]="settings().autoLogout === opt.val"
+                [class.bg-primary]="settings().autoLogout === opt.val"
+                [class.text-white]="settings().autoLogout === opt.val"
+                [class.border-slate-200]="settings().autoLogout !== opt.val"
+                [class.dark:border-slate-700]="settings().autoLogout !== opt.val"
+                [class.text-slate-600]="settings().autoLogout !== opt.val"
+                [class.dark:text-slate-300]="settings().autoLogout !== opt.val">
+                {{ opt.label }}
+              </button>
+            }
+          </div>
+        </section>
+
+        <!-- Sessions actives -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+          <h2 class="text-base font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">🖥️ Session active</h2>
+          <p class="text-xs text-slate-400 mb-4">Appareil actuellement connecté.</p>
+          <div class="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+            <div class="size-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-lg">💻</div>
+            <div class="flex-1 min-w-0">
+              <p class="font-semibold text-sm text-slate-800 dark:text-slate-200">Navigateur Web</p>
+              <p class="text-xs text-slate-400 truncate">Session actuelle — {{ 'Maintenant' }}</p>
+            </div>
+            <span class="text-[10px] font-bold px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full">Actif</span>
+          </div>
+        </section>
+      }
+
+      <!-- ─────────────────────────── AVANCÉ ─────────────────────────── -->
+      @if (activeTab() === 'avance') {
+
+        <!-- Export données -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+          <h2 class="text-base font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">📤 Export de vos données</h2>
+          <p class="text-xs text-slate-400 mb-5">Téléchargez une copie complète de toutes vos données SyndicPro.</p>
+          <div class="flex gap-3">
+            <button class="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-semibold text-sm hover:border-primary hover:text-primary transition-all">
+              📄 JSON
+            </button>
+            <button class="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-semibold text-sm hover:border-emerald-500 hover:text-emerald-600 transition-all">
+              📊 CSV
+            </button>
+          </div>
+        </section>
+
+        <!-- Cache -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-6">
+          <h2 class="text-base font-bold text-slate-900 dark:text-white mb-1 flex items-center gap-2">🗑️ Cache de l'application</h2>
+          <p class="text-xs text-slate-400 mb-5">Vider le cache local pour forcer le rechargement des données Firestore.</p>
+          <button onclick="caches?.keys?.().then(k=>k.forEach(n=>caches.delete(n))); localStorage.clear(); location.reload();"
+            class="flex items-center gap-2 px-5 py-2.5 border border-amber-300 text-amber-700 bg-amber-50 dark:bg-amber-900/20 rounded-xl font-semibold text-sm hover:bg-amber-100 transition-colors">
+            🔄 Vider le cache
+          </button>
+        </section>
+
+        <!-- Reset paramètres -->
+        <section class="bg-white dark:bg-slate-900 rounded-2xl border border-red-200 dark:border-red-900/50 shadow-sm p-6">
+          <h2 class="text-base font-bold text-red-700 dark:text-red-400 mb-1 flex items-center gap-2">⚠️ Réinitialiser les paramètres</h2>
+          <p class="text-xs text-slate-400 mb-5">Toutes vos préférences seront remises aux valeurs par défaut. Cette action est irréversible.</p>
+
+          @if (!showResetConfirm()) {
+            <button (click)="showResetConfirm.set(true)"
+              class="flex items-center gap-2 px-5 py-2.5 border border-red-300 text-red-700 bg-red-50 dark:bg-red-900/20 rounded-xl font-semibold text-sm hover:bg-red-100 transition-colors">
+              🔁 Réinitialiser
+            </button>
+          } @else {
+            <div class="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+              <p class="text-sm text-red-700 dark:text-red-400 font-semibold flex-1">Êtes-vous sûr ?</p>
+              <button (click)="resetToDefaults()"
+                class="px-4 py-2 bg-red-600 text-white rounded-lg font-bold text-xs hover:bg-red-700 transition-colors">
+                Confirmer
+              </button>
+              <button (click)="showResetConfirm.set(false)"
+                class="px-4 py-2 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 rounded-lg font-bold text-xs hover:bg-slate-50 transition-colors">
+                Annuler
+              </button>
+            </div>
+          }
+        </section>
+
+        <!-- Infos app -->
+        <section class="bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
+          <h2 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">Informations</h2>
+          <div class="space-y-2 text-xs text-slate-500">
+            <div class="flex justify-between"><span>Version</span><span class="font-bold text-slate-700 dark:text-slate-300">SyndicPro 1.0.0</span></div>
+            <div class="flex justify-between"><span>Framework</span><span class="font-bold text-slate-700 dark:text-slate-300">Angular 18 + Firebase</span></div>
+            <div class="flex justify-between"><span>Dernière mise à jour</span><span class="font-bold text-slate-700 dark:text-slate-300">{{ today }}</span></div>
+          </div>
+        </section>
+      }
+
+    </div>
+    <!-- /contenu -->
+
+  </div>
+</div>
+</div>

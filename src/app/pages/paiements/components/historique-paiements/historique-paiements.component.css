@@ -1,0 +1,322 @@
+/* historique-paiements.component.css */
+.historique-container {
+  padding: 24px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.05);
+  margin: 20px;
+}
+
+.historique-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.historique-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+}
+
+.subtitle {
+  color: #64748b;
+  margin: 0;
+  font-size: 14px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-excel {
+  background: #10b981;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s;
+}
+
+.btn-excel:hover {
+  background: #059669;
+}
+
+.btn-refresh {
+  background: #f1f5f9;
+  color: #334155;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid #e2e8f0;
+}
+
+.btn-refresh:hover {
+  background: #e2e8f0;
+}
+
+.bloc-selector {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.bloc-btn {
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 16px;
+  border: 2px solid #e2e8f0;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.bloc-btn.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.stats-excel {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.stat-value.stat-green {
+  color: #059669;
+}
+
+.stat-value.stat-red {
+  color: #dc2626;
+}
+
+.tableau-wrapper {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.tableau-excel {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: white;
+}
+
+.tableau-excel th {
+  background: #f8fafc;
+  padding: 14px 12px;
+  text-align: left;
+  font-weight: 700;
+  color: #334155;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.tableau-excel td {
+  padding: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #1e293b;
+}
+
+.date-col {
+  min-width: 80px;
+  font-size: 12px;
+}
+
+.etage-header {
+  background: #f1f5f9;
+}
+
+.etage-title {
+  font-weight: 700;
+  color: #0f172a;
+  padding: 10px 12px;
+  background: #f1f5f9;
+}
+
+.etage-total {
+  margin-left: 16px;
+  font-size: 12px;
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.appart-row:hover {
+  background: #f8fafc;
+}
+
+.appart-row.impaye {
+  background: #fff1f2;
+}
+
+.appart-row.impaye:hover {
+  background: #ffe4e6;
+}
+
+.appart-row.parking {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.appart-num {
+  font-weight: 600;
+}
+
+.paiement-cell {
+  text-align: right;
+}
+
+.paiement-montant {
+  color: #059669;
+  font-weight: 600;
+}
+
+.paiement-vide {
+  color: #94a3b8;
+}
+
+.total-cell {
+  font-weight: 700;
+  background: #f1f5f9;
+}
+
+.reste-cell {
+  font-weight: 700;
+}
+
+.text-red {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.text-green {
+  color: #059669;
+  font-weight: 700;
+}
+
+.badge-retard {
+  background: #fee2e2;
+  color: #b91c1c;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.total-row {
+  background: #f1f5f9;
+  font-weight: 700;
+  position: sticky;
+  bottom: 0;
+}
+
+.total-mois {
+  font-weight: 700;
+  color: #0f172a;
+  text-align: right;
+}
+
+.total-global {
+  font-weight: 800;
+  color: #059669;
+}
+
+.total-impaye {
+  font-weight: 800;
+  color: #dc2626;
+}
+
+.import-message {
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  animation: slideIn 0.3s ease;
+}
+
+.import-message.success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.import-message:not(.success) {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .historique-container {
+    padding: 16px;
+    margin: 10px;
+  }
+  
+  .stats-excel {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .historique-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .header-actions {
+    width: 100%;
+  }
+  
+  .btn-excel, .btn-refresh {
+    flex: 1;
+    text-align: center;
+  }
+}

@@ -1,0 +1,21 @@
+<section class="py-24 bg-white overflow-hidden">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">Ils nous font confiance</h2>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div *ngFor="let t of testimonials; let i = index" class="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm relative">
+        <div class="absolute top-6 right-8 text-gray-100" style="opacity:.08; font-size:40px">“</div>
+        <div class="flex items-center gap-4 mb-6">
+          <img [src]="t.avatar" [alt]="t.author" class="w-12 h-12 rounded-full object-cover ring-2 ring-indigo-100"/>
+          <div>
+            <h4 class="font-bold text-gray-900">{{ t.author }}</h4>
+            <p class="text-sm text-gray-500">{{ t.role }}</p>
+          </div>
+        </div>
+        <p class="text-gray-600 italic leading-relaxed">"{{ t.content }}"</p>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,278 @@
+<div class="min-h-screen bg-slate-50">
+
+  <!-- ══════════════════════ HEADER ══════════════════════ -->
+  <div class="max-w-[1400px] mx-auto px-6 py-8">
+
+    <section class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+      <div>
+        <p class="text-xs font-semibold text-primary uppercase tracking-widest mb-1">Gestion des charges</p>
+        <h1 class="text-2xl font-bold text-slate-900">Répartition des charges</h1>
+        <p class="text-slate-500 mt-1">Visualisez et recalculez la répartition d'une charge sur les appartements concernés.</p>
+      </div>
+      <div class="flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-slate-200">
+        <div class="flex flex-col min-w-64">
+          <select class="border-none bg-transparent focus:ring-0 text-slate-900 font-medium text-sm py-1 px-2"
+            [ngModel]="selectedChargeId()" (ngModelChange)="onChargeChange($event)">
+            <option [ngValue]="null">-- Choisir une charge --</option>
+            @for (charge of charges(); track charge.id) {
+              <option [ngValue]="charge.id">
+                {{ charge.libelle }} ({{ charge.mode_repartition | lowercase }} · {{ charge.scope }})
+              </option>
+            }
+          </select>
+        </div>
+        <button
+          class="bg-primary text-white px-5 py-2.5 rounded-lg font-semibold flex items-center gap-2 hover:bg-primary/90 transition-all shadow-md text-sm disabled:opacity-50"
+          (click)="regenererRepartition()"
+          [disabled]="isLoading() || !selectedChargeId()">
+          @if (isLoading()) { ⏳ Calcul… } @else { 🔄 Recalculer }
+        </button>
+        <button class="flex items-center gap-1.5 px-4 py-2.5 border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors"
+          routerLink="/charges">
+          ← Retour
+        </button>
+      </div>
+    </section>
+
+    <!-- ALERTES -->
+    @if (error()) {
+      <div class="mb-6 flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 rounded-xl px-5 py-4 text-sm font-medium">
+        ⚠️ {{ error() }}
+      </div>
+    }
+    @if (success()) {
+      <div class="mb-6 flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-5 py-4 text-sm font-medium">
+        ✅ {{ success() }}
+      </div>
+    }
+
+    @if (isLoading() && !selectedRepartition()) {
+      <div class="flex items-center justify-center py-20 gap-3 text-slate-400">
+        <div class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <span class="text-sm">Chargement des données…</span>
+      </div>
+    }
+
+    @if (selectedRepartition(); as rep) {
+
+      <!-- ══════════════════════ KPI CARDS ══════════════════════ -->
+      <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <p class="text-slate-500 font-medium text-sm">Montant total mensuel</p>
+            <span class="text-2xl">💰</span>
+          </div>
+          <p class="text-3xl font-bold tabular-nums text-slate-900">{{ rep.montant_total | number:'1.0-2' }} DT</p>
+          <p class="mt-2 text-slate-500 text-xs">Calculé le {{ rep.date_calcul | date:'dd MMM yyyy à HH:mm' }}</p>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <p class="text-slate-500 font-medium text-sm">Appartements concernés</p>
+            <span class="text-2xl">🏠</span>
+          </div>
+          <p class="text-3xl font-bold tabular-nums text-slate-900">{{ rep.repartitions.length }}</p>
+          <p class="mt-2 text-slate-500 text-xs">{{ rep.scope }} · {{ rep.mode_repartition }}</p>
+        </div>
+
+        @if (stats(); as s) {
+          <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+              <p class="text-slate-500 font-medium text-sm">Montant moyen / lot</p>
+              <span class="text-2xl">📊</span>
+            </div>
+            <p class="text-3xl font-bold tabular-nums text-slate-900">{{ s.montant_moyen_par_appartement | number:'1.0-2' }} DT</p>
+            <p class="mt-2 text-slate-500 text-xs">Min {{ s.montant_minimal_dt | number:'1.0-2' }} DT · Max {{ s.montant_maximal_dt | number:'1.0-2' }} DT</p>
+          </div>
+        }
+      </section>
+
+      <!-- ══════════════════════ LAYOUT PRINCIPAL: ZONE GAUCHE RÉDUITE + TABLEAU À DROITE ══════════════════════ -->
+      <div class="flex gap-4">
+        
+        <!-- Zone gauche très réduite (fixe 220px) -->
+        <div class="w-[220px] flex-shrink-0 space-y-4">
+          
+          <!-- Détails du calcul ultra compact -->
+          <div class="bg-primary/5 border-l-4 border-primary p-3 rounded-r-xl">
+            <h3 class="text-[10px] font-bold text-primary uppercase tracking-wider mb-2">Détails du calcul</h3>
+            <div class="space-y-2 text-[11px]">
+              <div>
+                <p class="text-[9px] text-slate-500 uppercase font-semibold">Charge</p>
+                <p class="font-medium text-slate-900 truncate">{{ selectedCharge()?.libelle || '—' }}</p>
+              </div>
+              <div>
+                <p class="text-[9px] text-slate-500 uppercase font-semibold">Date</p>
+                <p class="font-medium">{{ rep.date_calcul | date:'dd/MM/yy HH:mm' }}</p>
+              </div>
+              <div>
+                <p class="text-[9px] text-slate-500 uppercase font-semibold">Mode</p>
+                <p class="font-medium">{{ rep.mode_repartition }}</p>
+              </div>
+              <div>
+                <p class="text-[9px] text-slate-500 uppercase font-semibold">Périmètre</p>
+                <p class="font-medium">{{ rep.scope }}</p>
+              </div>
+              <div class="pt-2 border-t border-primary/10">
+                <button class="text-primary text-[11px] font-bold flex items-center gap-1 hover:underline">
+                  📥 PDF
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Légende ultra compacte -->
+          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+            <h3 class="text-[10px] font-bold text-slate-900 uppercase tracking-wider mb-2">Légende</h3>
+            <ul class="space-y-1.5 text-[11px]">
+              <li class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span>Élevée</span>
+              </li>
+              <li class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                <span>Moyenne</span>
+              </li>
+              <li class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-slate-300"></span>
+                <span>Faible</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Zone droite: Tableau + Historique (prend tout l'espace restant) -->
+        <div class="flex-1 min-w-0 space-y-6">
+          
+          <!-- Tableau principal -->
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-slate-50 border-b border-slate-200">
+                    <th class="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">#</th>
+                    <th class="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">N° Apt</th>
+                    <th class="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Copropriétaire</th>
+                    <th class="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Quote-part</th>
+                    <th class="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">%</th>
+                    <th class="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Montant</th>
+                    <th class="px-3 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Répartition</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  @for (r of rep.repartitions; track r.appartementId; let i = $index) {
+                    <tr class="hover:bg-slate-50/70 transition-colors text-xs"
+                      [class.bg-slate-50]="i % 2 === 1">
+                      <td class="px-3 py-2 text-slate-400">{{ i + 1 }}</td>
+                      <td class="px-3 py-2 font-semibold text-slate-900">{{ r.appartement_numero }}</td>
+                      <td class="px-3 py-2 text-slate-600 truncate max-w-[120px]">{{ r.coproprietaire_nom || r.coproprietaireId || '—' }}</td>
+                      <td class="px-3 py-2 text-right tabular-nums">{{ r.quote_part }}/{{ r.total_quote_parts }}</td>
+                      <td class="px-3 py-2 text-right tabular-nums font-medium">{{ r.pourcentage | number:'1.1-1' }}%</td>
+                      <td class="px-3 py-2 text-right tabular-nums font-bold text-emerald-700">{{ r.montant_mensuel | number:'1.0-0' }}</td>
+                      <td class="px-3 py-2 w-20">
+                        <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div class="h-1.5 rounded-full transition-all"
+                            [style.width.%]="r.pourcentage"
+                            [class.bg-emerald-500]="r.pourcentage > 3"
+                            [class.bg-amber-400]="r.pourcentage > 1.5 && r.pourcentage <= 3"
+                            [class.bg-slate-300]="r.pourcentage <= 1.5">
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot>
+                  <tr class="bg-primary/5 font-bold border-t-2 border-primary/20 text-xs">
+                    <td class="px-3 py-2" colspan="3">TOTAL</td>
+                    <td class="px-3 py-2 text-right">{{ rep.repartitions[0]?.total_quote_parts }}</td>
+                    <td class="px-3 py-2 text-right">100%</td>
+                    <td class="px-3 py-2 text-right text-primary">{{ rep.montant_total | number:'1.0-0' }} DT</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div class="px-3 py-2 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[10px] text-slate-500">
+              <span>{{ rep.repartitions.length }} apt · {{ rep.mode_repartition }}</span>
+              <button class="flex items-center gap-1 hover:text-primary">📥 CSV</button>
+            </div>
+          </div>
+
+          <!-- Historique des calculs -->
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-slate-400 text-base">🕐</span>
+              <h2 class="text-sm font-bold text-slate-900">Historique</h2>
+              <span class="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-full">
+                {{ repartitionsHistory().length }}
+              </span>
+            </div>
+
+            @if (!repartitionsHistory().length) {
+              <div class="bg-white rounded-xl border border-slate-200 py-6 text-center text-slate-400">
+                <p class="text-2xl mb-1">📭</p>
+                <p class="text-xs">Aucun historique</p>
+              </div>
+            } @else {
+              <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left">
+                    <thead>
+                      <tr class="bg-slate-50 border-b border-slate-200">
+                        <th class="px-3 py-2 text-[9px] font-bold text-slate-500 uppercase">Date</th>
+                        <th class="px-3 py-2 text-[9px] font-bold text-slate-500 uppercase">Ver</th>
+                        <th class="px-3 py-2 text-[9px] font-bold text-slate-500 uppercase text-right">Montant</th>
+                        <th class="px-3 py-2 text-[9px] font-bold text-slate-500 uppercase text-center">Apts</th>
+                        <th class="px-3 py-2 text-[9px] font-bold text-slate-500 uppercase text-center">Statut</th>
+                        <th class="px-3 py-2 text-[9px] font-bold text-slate-500 uppercase text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                      @for (h of repartitionsHistory(); track h.id; let i = $index) {
+                        <tr class="hover:bg-slate-50/50 transition-colors text-[11px]"
+                          [class.bg-primary/5]="h.id === selectedRepartition()?.id">
+                          <td class="px-3 py-1.5 whitespace-nowrap">{{ h.date_calcul | date:'dd/MM/yy HH:mm' }}</td>
+                          <td class="px-3 py-1.5 font-medium">v{{ repartitionsHistory().length - i }}</td>
+                          <td class="px-3 py-1.5 text-right font-bold">{{ h.montant_total | number:'1.0-0' }} DT</td>
+                          <td class="px-3 py-1.5 text-center">{{ h.repartitions.length }}</td>
+                          <td class="px-3 py-1.5 text-center">
+                            @if (h.id === selectedRepartition()?.id) {
+                              <span class="px-1 py-0.5 text-[8px] font-bold uppercase rounded bg-green-100 text-green-700">Validé</span>
+                            } @else {
+                              <span class="px-1 py-0.5 text-[8px] font-bold uppercase rounded bg-slate-100 text-slate-600">Archivé</span>
+                            }
+                          </td>
+                          <td class="px-3 py-1.5 text-right">
+                            @if (h.id === selectedRepartition()?.id) {
+                              <span class="text-slate-400 text-[10px]">Actif</span>
+                            } @else {
+                              <button class="text-primary hover:underline text-[10px]">Restaurer</button>
+                            }
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+    } @else if (!isLoading()) {
+      <!-- État vide -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-16 text-center text-slate-400">
+        <p class="text-5xl mb-4">⚙️</p>
+        <h3 class="font-bold text-slate-700 text-lg mb-2">Aucune répartition calculée</h3>
+        <p class="text-sm mb-6">Sélectionnez une charge et cliquez sur "Recalculer" pour générer la répartition.</p>
+        <button class="bg-primary text-white px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
+          (click)="regenererRepartition()"
+          [disabled]="!selectedChargeId()">
+          🔄 Calculer maintenant
+        </button>
+      </div>
+    }
+  </div>
+</div>

@@ -1,0 +1,308 @@
+import { Injectable, inject } from '@angular/core';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import {
+  addDoc, collection, getDocs, getFirestore, orderBy,
+  query, serverTimestamp, updateDoc, doc, where, deleteDoc,
+  onSnapshot, Unsubscribe,
+} from 'firebase/firestore';
+import { firebaseConfig } from '../../../../environments/firebase';
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+export type AlerteType     = 'IMPAYÉ' | 'BUDGET' | 'REUNION' | 'DOCUMENT' | 'MAINTENANCE' | 'SYSTEME' | 'VOTE';
+export type AlertePriorite = 'CRITIQUE' | 'HAUTE' | 'NORMALE' | 'INFO';
+
+export interface Alerte {
+  id?: string;
+  type: AlerteType;
+  priorite: AlertePriorite;
+  titre: string;
+  message: string;
+  lienUrl?: string;
+  lienLabel?: string;
+  lue: boolean;
+  destinataireId?: string;   // userId cible (vide = broadcast)
+  entityId?: string;         // ID de l'entité liée (paiement, réunion, etc.)
+  entityType?: string;       // 'paiement' | 'reunion' | 'document' | 'charge'
+  createdAt?: string;
+}
+
+// ── Service ──────────────────────────────────────────────────────────────────
+
+@Injectable({ providedIn: 'root' })
+export class AlerteService {
+  private readonly app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  private readonly db  = getFirestore(this.app);
+  private readonly COL = 'alertes';
+
+  // ─── LECTURE ───────────────────────────────────────────────────────────────
+
+  async getAll(): Promise<Alerte[]> {
+    const q = query(collection(this.db, this.COL), orderBy('createdAt', 'desc'));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => this.mapDoc(d));
+  }
+
+  async getNonLues(): Promise<Alerte[]> {
+    const q = query(collection(this.db, this.COL), where('lue', '==', false), orderBy('createdAt', 'desc'));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => this.mapDoc(d));
+  }
+
+  async getParDestinataire(userId: string): Promise<Alerte[]> {
+    const q = query(
+      collection(this.db, this.COL),
+      where('destinataireId', '==', userId),
+      orderBy('createdAt', 'desc'),
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => this.mapDoc(d));
+  }
+
+  // ─── ÉCOUTER EN TEMPS RÉEL (Firestore onSnapshot) ─────────────────────────
+
+  /**
+   * Écoute les alertes non lues en temps réel.
+   * Retourne une fonction Unsubscribe pour arrêter l'écoute.
+   */
+  ecouterNonLues(callback: (alertes: Alerte[]) => void): Unsubscribe {
+    const q = query(
+      collection(this.db, this.COL),
+      where('lue', '==', false),
+      orderBy('createdAt', 'desc'),
+    );
+    return onSnapshot(q, (snap) => {
+      const alertes = snap.docs.map(d => this.mapDoc(d));
+      callback(alertes);
+    });
+  }
+
+  // ─── ÉCRITURE ──────────────────────────────────────────────────────────────
+
+  /** Convertit un snapshot doc en Alerte avec Timestamp → Date */
+  private mapDoc(d: any): Alerte {
+    const data = d.data();
+    return {
+      id: d.id,
+      ...data,
+      createdAt: data['createdAt']?.toDate ? data['createdAt'].toDate() : data['createdAt'],
+    } as Alerte;
+  }
+
+  async marquerLue(id: string): Promise<void> {
+    await updateDoc(doc(this.db, this.COL, id), { lue: true });
+  }
+
+  async marquerToutesLues(ids: string[]): Promise<void> {
+    await Promise.all(ids.map(id => updateDoc(doc(this.db, this.COL, id), { lue: true })));
+  }
+
+  async supprimer(id: string): Promise<void> {
+    await deleteDoc(doc(this.db, this.COL, id));
+  }
+
+  /**
+   * Crée une alerte dans Firestore (collection `alertes`).
+   * C'est LA méthode à appeler depuis les autres services.
+   */
+  async create(data: Omit<Alerte, 'id' | 'createdAt'>): Promise<string> {
+    // Nettoyer les champs undefined (Firestore les rejette)
+    const clean: Record<string, any> = { createdAt: serverTimestamp() };
+    for (const [k, v] of Object.entries(data)) {
+      if (v !== undefined) clean[k] = v;
+    }
+    const ref = await addDoc(collection(this.db, this.COL), clean);
+    return ref.id;
+  }
+
+  // ─── MÉTHODES UTILITAIRES pour créer des alertes spécifiques ───────────────
+
+  /** Alerte de retard de paiement */
+  async alerteRetardPaiement(opts: {
+    destinataireId: string;
+    paiementId: string;
+    montant: number;
+    dateEcheance: string;
+    payerName: string;
+  }): Promise<string> {
+    return this.create({
+      type: 'IMPAYÉ',
+      priorite: 'HAUTE',
+      titre: `Retard de paiement — ${opts.payerName}`,
+      message: `Le paiement de ${opts.montant.toFixed(2)} MAD (échéance ${opts.dateEcheance}) est en retard.`,
+      lienUrl: '/paiements',
+      lienLabel: 'Voir les paiements',
+      lue: false,
+      destinataireId: opts.destinataireId,
+      entityId: opts.paiementId,
+      entityType: 'paiement',
+    });
+  }
+
+  /** Alerte paiement validé / reçu → utilisateur spécifique */
+  async alertePaiementValide(opts: {
+    destinataireId: string;
+    paiementId: string;
+    montant: number;
+    payerName: string;
+  }): Promise<string> {
+    return this.create({
+      type: 'IMPAYÉ',
+      priorite: 'INFO',
+      titre: `Paiement validé — ${opts.payerName}`,
+      message: `Le paiement de ${opts.montant.toFixed(2)} MAD a été validé avec succès.`,
+      lienUrl: '/paiements',
+      lienLabel: 'Voir le paiement',
+      lue: false,
+      destinataireId: opts.destinataireId,
+      entityId: opts.paiementId,
+      entityType: 'paiement',
+    });
+  }
+
+  /** Alerte paiement partiel → utilisateur spécifique */
+  async alertePaiementPartiel(opts: {
+    destinataireId: string;
+    paiementId: string;
+    montantTotal: number;
+    montantPaye: number;
+    payerName: string;
+  }): Promise<string> {
+    const reste = opts.montantTotal - opts.montantPaye;
+    return this.create({
+      type: 'IMPAYÉ',
+      priorite: 'NORMALE',
+      titre: `Paiement partiel — ${opts.payerName}`,
+      message: `Un paiement partiel de ${opts.montantPaye.toFixed(2)} MAD a été enregistré. Reste à payer : ${reste.toFixed(2)} MAD.`,
+      lienUrl: '/paiements',
+      lienLabel: 'Voir le paiement',
+      lue: false,
+      destinataireId: opts.destinataireId,
+      entityId: opts.paiementId,
+      entityType: 'paiement',
+    });
+  }
+
+  /** Alerte nouvelle réunion → BROADCAST (tous les utilisateurs) */
+  async alerteNouvelleReunion(opts: {
+    reunionId: string;
+    titre: string;
+    date: string;
+    lieu: string;
+    participantIds?: string[];  // ← si fourni, envoie une alerte par participant
+  }): Promise<string | void> {
+    const ids = opts.participantIds || [];
+    if (ids.length > 0) {
+      // Créer une alerte par participant sélectionné
+      await Promise.all(ids.map(uid =>
+        this.create({
+          type: 'REUNION',
+          priorite: 'NORMALE',
+          titre: `Nouvelle réunion : ${opts.titre}`,
+          message: `Réunion prévue le ${opts.date} à ${opts.lieu}. Votre présence est requise.`,
+          lienUrl: '/reunions',
+          lienLabel: 'Voir la réunion',
+          lue: false,
+          destinataireId: uid,
+          entityId: opts.reunionId,
+          entityType: 'reunion',
+        })
+      ));
+      return;
+    }
+    // Fallback broadcast si aucun participant spécifié
+    return this.create({
+      type: 'REUNION',
+      priorite: 'NORMALE',
+      titre: `Nouvelle réunion : ${opts.titre}`,
+      message: `Réunion prévue le ${opts.date} à ${opts.lieu}. Votre présence est requise.`,
+      lienUrl: '/reunions',
+      lienLabel: 'Voir la réunion',
+      lue: false,
+      entityId: opts.reunionId,
+      entityType: 'reunion',
+    });
+  }
+
+  /** Alerte demande de vote → ADMIN uniquement */
+  async alerteVote(opts: {
+    reunionId: string;
+    titrePoint: string;
+    adminId?: string;
+  }): Promise<string> {
+    return this.create({
+      type: 'VOTE',
+      priorite: 'HAUTE',
+      titre: `Vote requis : ${opts.titrePoint}`,
+      message: `Un vote est nécessaire pour le point "${opts.titrePoint}". Veuillez organiser le vote.`,
+      lienUrl: '/reunions',
+      lienLabel: 'Gérer le vote',
+      lue: false,
+      destinataireId: opts.adminId, // Uniquement l'admin
+      entityId: opts.reunionId,
+      entityType: 'reunion',
+    });
+  }
+
+  /** Alerte nouveau document → BROADCAST (tous les utilisateurs) */
+  async alerteNouveauDocument(opts: {
+    documentId: string;
+    nomDocument: string;
+    categorie: string;
+    uploadePar: string;
+  }): Promise<string> {
+    return this.create({
+      type: 'DOCUMENT',
+      priorite: 'INFO',
+      titre: `Nouveau document : ${opts.nomDocument}`,
+      message: `Un document de type "${opts.categorie}" a été ajouté par ${opts.uploadePar}.`,
+      lienUrl: '/documents',
+      lienLabel: 'Voir le document',
+      lue: false,
+      // Pas de destinataireId → tous les utilisateurs la verront
+      entityId: opts.documentId,
+      entityType: 'document',
+    });
+  }
+
+  /** Alerte changement de statut réunion */
+  async alerteStatutReunion(opts: {
+    reunionId: string;
+    titre: string;
+    nouveauStatut: string;
+  }): Promise<string> {
+    return this.create({
+      type: 'REUNION',
+      priorite: 'NORMALE',
+      titre: `Réunion "${opts.titre}" — ${opts.nouveauStatut}`,
+      message: `Le statut de la réunion a changé vers : ${opts.nouveauStatut}.`,
+      lienUrl: '/reunions',
+      lienLabel: 'Voir la réunion',
+      lue: false,
+      entityId: opts.reunionId,
+      entityType: 'reunion',
+    });
+  }
+
+  // ─── HELPERS D'AFFICHAGE ───────────────────────────────────────────────────
+
+  static prioriteColor(p: AlertePriorite): string {
+    return {
+      CRITIQUE: 'bg-red-100 text-red-800 border-red-300',
+      HAUTE:    'bg-orange-100 text-orange-800 border-orange-300',
+      NORMALE:  'bg-blue-100 text-blue-800 border-blue-300',
+      INFO:     'bg-slate-100 text-slate-700 border-slate-300',
+    }[p] ?? '';
+  }
+
+  static prioriteIcon(p: AlertePriorite): string {
+    return { CRITIQUE: '🔴', HAUTE: '🟠', NORMALE: '🔵', INFO: '⚪' }[p] ?? '⚪';
+  }
+
+  static typeIcon(t: AlerteType): string {
+    return {
+      IMPAYÉ: '💳', BUDGET: '💰', REUNION: '📅',
+      DOCUMENT: '📄', MAINTENANCE: '🔧', SYSTEME: '⚙️', VOTE: '🗳️',
+    }[t] ?? '🔔';
+  }
+}

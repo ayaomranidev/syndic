@@ -1,0 +1,117 @@
+<div class="role-selection" role="main" aria-label="Sélection de rôle">
+  <div class="background-blob blob-left"></div>
+  <div class="background-blob blob-right"></div>
+
+  <div class="role-card-shell">
+    <!-- Panneau gauche - Profil utilisateur -->
+    <div class="profile-panel">
+      <div class="profile-header">
+        <div class="avatar" aria-label="Avatar utilisateur">
+          <span>{{ user.fullname?.charAt(0) || user.email.charAt(0) }}</span>
+          <div class="avatar-badge" aria-label="Compte vérifié">✓</div>
+        </div>
+        <h2>{{ user.fullname || 'Bienvenue' }}</h2>
+        <p class="profile-email">{{ user.email }}</p>
+        <div class="profile-pill">
+          <span>🎯</span>
+          <span>{{ user.availableRoles?.length || 1 }} rôle(s) disponible(s)</span>
+        </div>
+      </div>
+
+      <div class="profile-list">
+        <div class="profile-list-item">
+          <div class="icon-circle success">🛡️</div>
+          <span>Compte vérifié et sécurisé</span>
+        </div>
+        <div class="profile-list-item">
+          <div class="icon-circle info">ℹ️</div>
+          <span>Accès personnalisé selon le rôle</span>
+        </div>
+        <div class="profile-list-item">
+          <div class="icon-circle warning">🕒</div>
+          <span>Dernière connexion: Aujourd'hui</span>
+        </div>
+      </div>
+
+      <div class="residence-card">
+        <div class="icon-circle muted">🏢</div>
+        <div>
+          <p class="residence-title">Résidence</p>
+          <p class="residence-name">{{ user.residence || 'Résidence Les Jardins Fleuris' }}</p>
+          @if (user.batiment && user.lot) {
+            <p class="residence-sub">{{ user.batiment }} • {{ user.lot }}</p>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Panneau droit - Liste des rôles -->
+    <div class="role-panel">
+      <div class="role-header">
+        <div class="role-icon">🎭</div>
+        <div>
+          <h2>Choisissez votre rôle</h2>
+          <p>Vous avez accès à plusieurs profils. Sélectionnez celui que vous souhaitez utiliser pour cette session.</p>
+        </div>
+      </div>
+
+      <div class="role-list">
+        @for (role of user.availableRoles; track role) {
+          @let roleInfo = roleInfos[role];
+          @if (roleInfo) {
+            <button 
+              type="button" 
+              class="role-item" 
+              (click)="selectRole(role)"
+              [attr.aria-label]="'Sélectionner le rôle ' + roleInfo.label"
+            >
+              <div class="role-item-left">
+                <div class="role-icon-circle {{ roleInfo.color }}">{{ roleInfo.icon }}</div>
+                <div>
+                  <div class="role-item-title">{{ roleInfo.label }}</div>
+                  <div class="role-item-desc">{{ roleInfo.description }}</div>
+                  <div class="permission-grid">
+                    @for (permission of roleInfo.permissions; track permission) {
+                      <div class="permission-pill">✓ {{ permission }}</div>
+                    }
+                  </div>
+                </div>
+              </div>
+              <div class="role-item-cta">Sélectionner →</div>
+            </button>
+          } @else {
+            <!-- Fallback pour rôle inconnu (ne devrait jamais arriver) -->
+            <div class="role-item error" role="alert">
+              <div class="role-item-left">
+                <div class="role-icon-circle bg-gray-500">⚠️</div>
+                <div>
+                  <div class="role-item-title">Rôle inconnu</div>
+                  <div class="role-item-desc">Le rôle "{{ role }}" n'est pas reconnu. Contactez l'administrateur.</div>
+                </div>
+              </div>
+            </div>
+          }
+        }
+      </div>
+
+      <div class="info-banner">
+        <div class="icon-circle muted">💡</div>
+        <div>
+          <p class="info-title">Information</p>
+          <p class="info-text">Vous pouvez changer de rôle à tout moment en vous déconnectant. Chaque rôle dispose d'un tableau de bord et de permissions spécifiques adaptés à vos fonctions.</p>
+        </div>
+      </div>
+
+      <div class="footer-actions">
+        <button 
+          type="button" 
+          class="logout-button" 
+          (click)="logout()"
+          aria-label="Se connecter avec un autre compte"
+        >
+          ↩️ Se connecter avec un autre compte
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

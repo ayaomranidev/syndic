@@ -1,0 +1,20 @@
+<div class="app-container">
+	@if (showLayout) {
+		<!-- Navbar fixed en haut -->
+		<app-navbar></app-navbar>
+		
+		<!-- Sidebar fixed à gauche -->
+		<app-sidebar></app-sidebar>
+    
+
+	}
+	
+	<!-- Contenu principal -->
+	<main class="app-main" 
+        [class.with-sidebar]="showLayout"
+        [class.without-sidebar]="!showLayout">
+		<div class="main-content-wrapper">
+			<router-outlet></router-outlet>
+		</div>
+	</main>
+</div>

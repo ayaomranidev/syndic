@@ -1,0 +1,365 @@
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700;800;900&display=swap');
+
+:host {
+  display: block;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Custom animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Shortcut buttons styling */
+.shortcut-btn {
+  @apply flex items-center gap-1.5 sm:gap-2 bg-white border border-slate-200 rounded-lg sm:rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-slate-600 hover:border-[#1e3a5f] hover:text-[#1e3a5f] hover:shadow-sm transition-all group;
+}
+
+/* Media Queries détaillées */
+
+/* Extra small devices (phones, 480px and down) */
+@media (max-width: 480px) {
+  .xs\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  
+  .xs\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  
+  .xs\:inline {
+    display: inline;
+  }
+  
+  .xs\:hidden {
+    display: none;
+  }
+  
+  .xs\:flex-row {
+    flex-direction: row;
+  }
+  
+  .xs\:w-auto {
+    width: auto;
+  }
+  
+  /* Ajustements pour très petits écrans */
+  .material-symbols-outlined {
+    font-size: 1.25rem !important;
+  }
+  
+  .kpi-card {
+    padding: 0.75rem;
+  }
+}
+
+/* Small devices (landscape phones, 576px and up) */
+@media (min-width: 576px) {
+  .sm\:p-6 {
+    padding: 1.5rem;
+  }
+  
+  .sm\:text-sm {
+    font-size: 0.875rem;
+  }
+  
+  .sm\:text-base {
+    font-size: 1rem;
+  }
+  
+  .sm\:h-48 {
+    height: 12rem;
+  }
+  
+  .sm\:gap-4 {
+    gap: 1rem;
+  }
+}
+
+/* Medium devices (tablets, 768px and up) */
+@media (min-width: 768px) {
+  .md\:flex {
+    display: flex;
+  }
+  
+  .md\:hidden {
+    display: none;
+  }
+  
+  .md\:text-sm {
+    font-size: 0.875rem;
+  }
+  
+  /* Améliorations pour tablettes */
+  .chart-container {
+    min-height: 200px;
+  }
+  
+  .activity-item {
+    padding: 1rem 1.5rem;
+  }
+}
+
+/* Large devices (desktops, 992px and up) */
+@media (min-width: 992px) {
+  .lg\:col-span-2 {
+    grid-column: span 2 / span 2;
+  }
+  
+  .lg\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  
+  .lg\:grid-cols-5 {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  
+  .lg\:p-8 {
+    padding: 2rem;
+  }
+  
+  .lg\:text-2xl {
+    font-size: 1.5rem;
+  }
+  
+  .lg\:h-52 {
+    height: 13rem;
+  }
+  
+  .lg\:gap-6 {
+    gap: 1.5rem;
+  }
+}
+
+/* Extra large devices (large desktops, 1200px and up) */
+@media (min-width: 1200px) {
+  .xl\:grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  
+  .xl\:col-span-2 {
+    grid-column: span 2 / span 2;
+  }
+  
+  .xl\:p-8 {
+    padding: 2rem;
+  }
+  
+  .xl\:text-3xl {
+    font-size: 1.875rem;
+  }
+}
+
+/* Height-based media queries */
+@media (max-height: 700px) {
+  .dashboard-container {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  
+  .kpi-card {
+    padding: 0.75rem;
+  }
+  
+  .chart-container {
+    height: 180px;
+  }
+}
+
+@media (max-height: 500px) {
+  .dashboard-container {
+    padding: 0.25rem;
+  }
+  
+  .hide-on-short {
+    display: none;
+  }
+}
+
+/* Orientation-based media queries */
+@media (orientation: landscape) and (max-width: 900px) {
+  .grid {
+    gap: 0.75rem;
+  }
+  
+  .kpi-card {
+    padding: 0.5rem;
+  }
+  
+  .kpi-card h3 {
+    font-size: 1rem;
+  }
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+  /* Styles pour mode sombre si nécessaire */
+  .dark\:bg-slate-800 {
+    background-color: #1e293b;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none;
+  }
+  
+  .dashboard-container {
+    background: white;
+    padding: 0.5in;
+  }
+  
+  .kpi-card {
+    border: 1px solid #ddd;
+    box-shadow: none;
+  }
+}
+
+/* Accessibility - Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  .transition-all,
+  .hover\:shadow-md:hover,
+  .group-hover\:text-\[--color\]:hover {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Touch-friendly targets for mobile */
+@media (max-width: 768px) {
+  button, 
+  .cursor-pointer,
+  [routerLink] {
+    min-height: 40px;
+    min-width: 40px;
+  }
+  
+  .touch-optimized {
+    padding: 0.75rem;
+  }
+  
+  /* Espacement pour le touch */
+  .shortcut-btn {
+    padding: 0.625rem 1rem;
+  }
+}
+
+/* High-resolution screens */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .border {
+    border-width: 0.5px;
+  }
+}
+
+/* Custom scrollbar for better UX */
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+}
+
+/* Loading skeleton animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #f1f5f9 25%,
+    #e2e8f0 50%,
+    #f1f5f9 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Focus styles for better accessibility */
+*:focus-visible {
+  outline: 2px solid #1e3a5f;
+  outline-offset: 2px;
+}
+
+/* Responsive typography classes */
+.responsive-heading {
+  font-size: clamp(1.25rem, 5vw, 2rem);
+}
+
+.responsive-text {
+  font-size: clamp(0.75rem, 3vw, 1rem);
+}
+
+.responsive-kpi {
+  font-size: clamp(1.25rem, 4vw, 2rem);
+}
+
+/* Chart responsiveness */
+@media (max-width: 640px) {
+  .chart-bar-label {
+    transform: rotate(-45deg);
+    font-size: 0.6rem;
+    white-space: nowrap;
+  }
+}
+
+/* Grid adjustments for different screens */
+@media (max-width: 480px) {
+  .activities-list > * {
+    padding: 0.75rem;
+  }
+  
+  .alert-item {
+    padding: 0.75rem;
+  }
+}
+
+/* Safe area insets for modern mobile devices */
+@supports (padding: max(0px)) {
+  .safe-area-inset {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+}
+
+/* Container queries for component-level responsiveness */
+@container (max-width: 400px) {
+  .container-card {
+    padding: 0.75rem;
+  }
+  
+  .container-title {
+    font-size: 0.875rem;
+  }
+}

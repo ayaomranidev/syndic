@@ -1,0 +1,402 @@
+// firestore.rules
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function hasUserDoc() {
+      return isSignedIn() && exists(userPath());
+    }
+
+    function userData() {
+      return hasUserDoc() ? get(userPath()).data : null;
+    }
+
+    function hasRole(role) {
+      return isSignedIn() && (
+        request.auth.token.role == role ||
+        request.auth.token.selectedRole == role ||
+        (request.auth.token.roles is list && request.auth.token.roles.hasAny([role])) ||
+        (hasUserDoc() && userData().role == role) ||
+        (hasUserDoc() && userData().selectedRole == role) ||
+        (hasUserDoc() && userData().roles is list && userData().roles.hasAny([role]))
+      );
+    }
+
+    // ADMIN = admin global
+    function isGlobalAdmin() {
+      return isSignedIn() && (
+        request.auth.token.isAdmin == true ||
+        hasRole('ADMIN')
+      );
+    }
+
+    function isResidenceAdmin() {
+      return isSignedIn() && hasRole('ADMIN_RESIDENCE');
+    }
+
+    function myResidenceId() {
+      return hasUserDoc()
+        ? (
+            userData().residenceId != null
+              ? userData().residenceId
+              : (userData().residenceDocId != null ? userData().residenceDocId : null)
+          )
+        : null;
+    }
+
+    function myResidenceName() {
+      return hasUserDoc()
+        ? (
+            userData().residence != null
+              ? userData().residence
+              : (userData().residenceName != null ? userData().residenceName : null)
+          )
+        : null;
+    }
+
+    function residenceIdFromData(data) {
+      return data.residenceId != null
+        ? data.residenceId
+        : (data.residenceDocId != null ? data.residenceDocId : null);
+    }
+
+    function canManageResidence(residenceId) {
+      return isGlobalAdmin() || (
+        isResidenceAdmin() &&
+        residenceId != null &&
+        myResidenceId() != null &&
+        myResidenceId() == residenceId
+      );
+    }
+
+    function canManageUserData(data) {
+      return canManageResidence(residenceIdFromData(data)) ||
+        (
+          isResidenceAdmin() &&
+          myResidenceName() != null &&
+          data.residence != null &&
+          data.residence == myResidenceName()
+        );
+    }
+
+    function canManageLegacyData(data) {
+      return canManageResidence(residenceIdFromData(data)) ||
+        (
+          isResidenceAdmin() &&
+          myResidenceName() != null &&
+          (
+            (data.residence != null && data.residence == myResidenceName()) ||
+            (data.residenceName != null && data.residenceName == myResidenceName())
+          )
+        );
+    }
+
+    function documentResidenceId(data) {
+      return data.residenceId != null
+        ? data.residenceId
+        : (
+            data.residenceDocId != null
+              ? data.residenceDocId
+              : (
+                  data.appartementId != null
+                    ? residenceIdFromData(get(/databases/$(database)/documents/appartements/$(data.appartementId)).data)
+                    : null
+                )
+          );
+    }
+
+    function paiementResidenceId(data) {
+      return data.residenceId != null
+        ? data.residenceId
+        : (
+            data.appartementId != null
+              ? residenceIdFromData(get(/databases/$(database)/documents/appartements/$(data.appartementId)).data)
+              : null
+          );
+    }
+
+    function repartitionResidenceId(data) {
+      return data.residenceId != null
+        ? data.residenceId
+        : (
+            data.chargeId != null
+              ? residenceIdFromData(get(/databases/$(database)/documents/charges/$(data.chargeId)).data)
+              : null
+          );
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Users
+    match /users/{userId} {
+      allow read: if isOwner(userId) ||
+        isGlobalAdmin() ||
+        isResidenceAdmin();
+
+      allow create: if isGlobalAdmin() ||
+        (isResidenceAdmin() && canManageUserData(request.resource.data));
+
+      allow update: if isOwner(userId) ||
+        isGlobalAdmin() ||
+        (
+          isResidenceAdmin() &&
+          canManageUserData(resource.data) &&
+          canManageUserData(request.resource.data)
+        );
+
+      allow delete: if isGlobalAdmin() ||
+        (isResidenceAdmin() && canManageUserData(resource.data));
+    }
+
+    // Residences
+    match /residences/{residenceId} {
+      allow read: if isGlobalAdmin() ||
+        isResidenceAdmin();
+
+      allow create, update, delete: if isGlobalAdmin() ||
+        (isResidenceAdmin() && myResidenceId() == residenceId);
+    }
+
+    // Batiments
+    match /batiments/{batimentId} {
+      allow read: if isGlobalAdmin() ||
+        isResidenceAdmin() ||
+        canManageLegacyData(resource.data);
+
+      allow create: if isGlobalAdmin() ||
+        canManageResidence(residenceIdFromData(request.resource.data));
+
+      allow update: if isGlobalAdmin() || (
+        canManageLegacyData(resource.data) &&
+        canManageResidence(residenceIdFromData(request.resource.data))
+      );
+
+      allow delete: if isGlobalAdmin() ||
+        canManageLegacyData(resource.data);
+    }
+
+    // Appartements (root)
+    match /appartements/{appartementId} {
+      allow read: if isGlobalAdmin() ||
+        isResidenceAdmin() ||
+        canManageLegacyData(resource.data);
+
+      allow create: if isGlobalAdmin() ||
+        canManageResidence(residenceIdFromData(request.resource.data));
+
+      allow update: if isGlobalAdmin() || (
+        canManageLegacyData(resource.data) &&
+        canManageResidence(residenceIdFromData(request.resource.data))
+      );
+
+      allow delete: if isGlobalAdmin() ||
+        canManageLegacyData(resource.data);
+    }
+
+    // Appartements sous residence
+    match /residences/{residenceId}/appartements/{appartementId} {
+      allow read: if isGlobalAdmin() ||
+        isResidenceAdmin();
+      allow create, update, delete: if isGlobalAdmin() ||
+        (isResidenceAdmin() && myResidenceId() == residenceId);
+    }
+
+    // Paiements
+    match /paiements/{paiementId} {
+      allow read: if isGlobalAdmin() ||
+        isResidenceAdmin() ||
+        canManageResidence(paiementResidenceId(resource.data));
+
+      allow create: if isGlobalAdmin() ||
+        canManageResidence(paiementResidenceId(request.resource.data));
+
+      allow update: if isGlobalAdmin() || (
+        canManageResidence(paiementResidenceId(resource.data)) &&
+        canManageResidence(paiementResidenceId(request.resource.data))
+      );
+
+      allow delete: if isGlobalAdmin() ||
+        canManageResidence(paiementResidenceId(resource.data));
+    }
+
+    // Historique paiements
+    match /historique_paiements/{id} {
+      allow read: if isGlobalAdmin() ||
+        isResidenceAdmin() ||
+        canManageResidence(paiementResidenceId(resource.data));
+
+      allow create, update: if isGlobalAdmin() ||
+        canManageResidence(paiementResidenceId(request.resource.data));
+
+      allow delete: if isGlobalAdmin() ||
+        canManageResidence(paiementResidenceId(resource.data));
+    }
+
+    // Charges
+    match /charges/{chargeId} {
+      allow read: if isGlobalAdmin() ||
+        isResidenceAdmin() ||
+        canManageLegacyData(resource.data);
+
+      allow create: if isGlobalAdmin() ||
+        canManageResidence(residenceIdFromData(request.resource.data));
+
+      allow update: if isGlobalAdmin() || (
+        canManageLegacyData(resource.data) &&
+        canManageResidence(residenceIdFromData(request.resource.data))
+      );
+
+      allow delete: if isGlobalAdmin() ||
+        canManageLegacyData(resource.data);
+    }
+
+    // Dettes
+    match /dettes/{detteId} {
+      allow read: if isGlobalAdmin() ||
+        isResidenceAdmin() ||
+        canManageResidence(residenceIdFromData(resource.data));
+
+      allow create: if isGlobalAdmin() ||
+        canManageResidence(residenceIdFromData(request.resource.data));
+
+      allow update: if isGlobalAdmin() || (
+        canManageResidence(residenceIdFromData(resource.data)) &&
+        canManageResidence(residenceIdFromData(request.resource.data))
+      );
+
+      allow delete: if isGlobalAdmin() ||
+        canManageResidence(residenceIdFromData(resource.data));
+    }
+
+    // Repartition des charges
+    match /charge_repartitions/{repartitionId} {
+      allow read: if isGlobalAdmin() ||
+        isResidenceAdmin() ||
+        canManageResidence(repartitionResidenceId(resource.data));
+
+      allow create, update: if isGlobalAdmin() ||
+        canManageResidence(repartitionResidenceId(request.resource.data));
+
+      allow delete: if isGlobalAdmin() ||
+        canManageResidence(repartitionResidenceId(resource.data));
+    }
+
+    // Budget, depenses, etat tresorerie
+    match /budget_lignes/{ligneId} {
+      allow read: if isGlobalAdmin() ||
+        isResidenceAdmin() ||
+        canManageResidence(residenceIdFromData(resource.data));
+
+      allow create, update: if isGlobalAdmin() ||
+        canManageResidence(residenceIdFromData(request.resource.data));
+
+      allow delete: if isGlobalAdmin() ||
+        canManageResidence(residenceIdFromData(resource.data));
+    }
+
+    match /depenses_copro/{id} {
+      allow read: if isGlobalAdmin() ||
+        isResidenceAdmin() ||
+        canManageResidence(residenceIdFromData(resource.data));
+
+      allow create, update: if isGlobalAdmin() ||
+        canManageResidence(residenceIdFromData(request.resource.data));
+
+      allow delete: if isGlobalAdmin() ||
+        canManageResidence(residenceIdFromData(resource.data));
+    }
+
+    match /etat_tresorerie/{bloc} {
+      allow read: if isGlobalAdmin() ||
+        isResidenceAdmin() ||
+        canManageResidence(residenceIdFromData(resource.data));
+
+      allow create, update: if isGlobalAdmin() ||
+        canManageResidence(residenceIdFromData(request.resource.data));
+
+      allow delete: if isGlobalAdmin() ||
+        canManageResidence(residenceIdFromData(resource.data));
+    }
+
+    // Documents / Reunions / Rapports
+    match /documents/{documentId} {
+      allow read: if isGlobalAdmin() ||
+        isResidenceAdmin() ||
+        canManageResidence(documentResidenceId(resource.data));
+
+      allow create, update: if isGlobalAdmin() ||
+        canManageResidence(documentResidenceId(request.resource.data));
+
+      allow delete: if isGlobalAdmin() ||
+        canManageResidence(documentResidenceId(resource.data));
+    }
+
+    match /reunions/{reunionId} {
+      allow read: if isGlobalAdmin() ||
+        isResidenceAdmin() ||
+        canManageResidence(residenceIdFromData(resource.data));
+
+      // Reunion docs are not fully residence-scoped yet in legacy data.
+      // If residenceId is present, scope is enforced; otherwise allow ADMIN_RESIDENCE management.
+      allow create, update: if isGlobalAdmin() ||
+        (
+          isResidenceAdmin() &&
+          (
+            residenceIdFromData(request.resource.data) == null ||
+            canManageResidence(residenceIdFromData(request.resource.data))
+          )
+        );
+
+      allow delete: if isGlobalAdmin() ||
+        (
+          isResidenceAdmin() &&
+          (
+            residenceIdFromData(resource.data) == null ||
+            canManageResidence(residenceIdFromData(resource.data))
+          )
+        );
+    }
+
+    match /rapports/{rapportId} {
+      allow read: if isGlobalAdmin() ||
+        isResidenceAdmin() ||
+        canManageResidence(documentResidenceId(resource.data));
+
+      allow create, update: if isGlobalAdmin() ||
+        canManageResidence(documentResidenceId(request.resource.data));
+
+      allow delete: if isGlobalAdmin() ||
+        canManageResidence(documentResidenceId(resource.data));
+    }
+
+    // Alertes / Notifications
+    match /alertes/{alerteId} {
+      allow read: if isGlobalAdmin() ||
+        resource.data.destinataireId == request.auth.uid ||
+        canManageResidence(residenceIdFromData(resource.data));
+
+      allow create: if isSignedIn();
+
+      allow update: if isGlobalAdmin() ||
+        resource.data.destinataireId == request.auth.uid ||
+        canManageResidence(residenceIdFromData(resource.data));
+
+      allow delete: if isGlobalAdmin() ||
+        canManageResidence(residenceIdFromData(resource.data));
+    }
+
+    // Tokens FCM
+    match /fcm_tokens/{tokenId} {
+      allow read, write, delete: if isSignedIn();
+    }
+  }
+}

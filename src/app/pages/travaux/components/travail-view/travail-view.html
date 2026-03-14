@@ -1,0 +1,8 @@
+<div class="p-4">
+  <h3 class="text-lg font-bold">Détails Travaux</h3>
+  <p *ngIf="!id">Aucun travail sélectionné.</p>
+  <div *ngIf="id">
+    <p>ID: {{ id }}</p>
+    <!-- TODO: afficher avancement, budget, photos -->
+  </div>
+</div>

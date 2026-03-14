@@ -1,0 +1,376 @@
+<div class="min-h-screen bg-slate-50">
+  <div class="max-w-[1400px] mx-auto px-4 lg:px-10 py-8 flex flex-col gap-6">
+
+    <!-- HEADER -->
+    <div class="flex flex-wrap justify-between items-end gap-4">
+      <div class="flex flex-col gap-2">
+        <div class="flex items-center gap-2 text-slate-500 text-sm font-medium">
+          <a class="hover:underline hover:text-primary" routerLink="/dette">Dettes</a>
+          <span class="text-slate-300">›</span>
+          <span>Par année</span>
+        </div>
+        <h1 class="text-4xl font-black text-slate-900 leading-tight tracking-tight">Dettes par année</h1>
+        <p class="text-slate-500 text-sm">Suivez l'évolution des arriérés et des paiements par exercice fiscal.</p>
+      </div>
+      <div class="flex gap-3">
+        <button (click)="chargerDettes()" [disabled]="isLoading()"
+          class="flex items-center gap-2 h-10 px-4 bg-white border border-slate-200 rounded-lg text-slate-700 text-sm font-bold hover:bg-slate-50 disabled:opacity-50 transition-colors shadow-sm">
+          <span>🔄</span> Actualiser
+        </button>
+        <button class="flex items-center gap-2 h-10 px-4 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary/90 shadow-sm transition-colors">
+          <span>📤</span> Exporter PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- ERREUR -->
+    @if (error()) {
+      <div class="flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 rounded-xl px-5 py-4 text-sm font-medium">
+        <span>⚠️</span> {{ error() }}
+      </div>
+    }
+
+    <!-- CHARGEMENT -->
+    @if (isLoading()) {
+      <div class="flex items-center justify-center py-20 gap-3 text-slate-400">
+        <div class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <span class="text-sm">Chargement des dettes…</span>
+      </div>
+    }
+
+    @if (!isLoading() && !error()) {
+
+      <!-- KPI CARDS -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="flex flex-col gap-2 rounded-xl p-6 bg-white border border-slate-200 shadow-sm">
+          <div class="flex justify-between items-start">
+            <p class="text-slate-500 text-sm font-medium uppercase tracking-wider">Total Dû</p>
+            <span class="text-xl">💳</span>
+          </div>
+          <p class="text-slate-900 text-3xl font-black tabular-nums">{{ formatMontant(kpiTotal()) }}</p>
+          <p class="text-slate-400 text-xs">Toutes années confondues</p>
+        </div>
+
+        <div class="flex flex-col gap-2 rounded-xl p-6 bg-white border border-slate-200 shadow-sm">
+          <div class="flex justify-between items-start">
+            <p class="text-slate-500 text-sm font-medium uppercase tracking-wider">Total Payé</p>
+            <span class="text-xl">✅</span>
+          </div>
+          <p class="text-slate-900 text-3xl font-black tabular-nums">{{ formatMontant(kpiPaye()) }}</p>
+          <p class="text-slate-400 text-xs">Taux de recouvrement : {{ kpiTaux() }}%</p>
+        </div>
+
+        <div class="flex flex-col gap-2 rounded-xl p-6 bg-primary/5 border-2 border-primary/20 shadow-sm">
+          <div class="flex justify-between items-start">
+            <p class="text-primary text-sm font-bold uppercase tracking-wider">Reste à Payer Global</p>
+            <span class="text-xl">⚠️</span>
+          </div>
+          <p class="text-primary text-3xl font-black tabular-nums">{{ formatMontant(kpiRestant()) }}</p>
+          <div class="w-full bg-primary/20 rounded-full h-1.5 mt-1">
+            <div class="bg-primary h-1.5 rounded-full transition-all" 
+                 [style.width.%]="kpiTaux()"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BANDEAU FIFO -->
+      <div class="rounded-xl border border-primary/20 bg-primary/5 p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex gap-4">
+          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-white text-lg">ℹ</div>
+          <div>
+            <p class="text-primary text-base font-bold leading-tight">Logique de Paiement FIFO (First-In, First-Out)</p>
+            <p class="text-slate-600 text-sm leading-normal mt-0.5">
+              Les paiements reçus sont automatiquement imputés sur les dettes les plus anciennes en premier pour éviter l'accumulation d'arriérés historiques.
+            </p>
+          </div>
+        </div>
+        <button class="text-sm font-bold text-primary hover:underline flex items-center gap-1 shrink-0">
+          En savoir plus →
+        </button>
+      </div>
+
+<!-- SECTIONS PAR ANNÉE -->
+<div class="flex flex-col gap-8 mt-2">
+  @for (resume of resumeParAnnee(); track resume.annee) {
+    @let pct = getPourcentagePaye(resume);
+
+    <div class="flex flex-col gap-4">
+      <!-- En-tête année -->
+      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
+        <div class="flex items-center gap-4">
+          <button (click)="choisirAnnee(resume.annee)"
+            class="text-2xl font-black tracking-tight transition-colors"
+            [class.text-slate-900]="anneeSelectionnee() === resume.annee"
+            [class.text-slate-400]="anneeSelectionnee() !== resume.annee">
+            Année {{ resume.annee }}
+          </button>
+          @if (isCurrentYear(resume.annee)) {
+            <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-bold uppercase">
+              En cours
+            </span>
+          } @else {
+            <span class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold uppercase border border-slate-200">
+              Archive
+            </span>
+            @if (resume.totalRestant > 0) {
+              <span class="flex items-center gap-1 text-primary text-xs font-bold">
+                ❄ Arriérés
+              </span>
+            }
+          }
+        </div>
+              <div class="flex items-center gap-6 text-sm">
+                <div class="flex flex-col text-right">
+                  <span class="text-slate-400 uppercase text-[10px] font-bold tracking-widest">Dû {{ resume.annee }}</span>
+                  <span class="font-bold text-slate-900">{{ formatMontant(resume.totalOriginal) }}</span>
+                </div>
+                <div class="flex flex-col text-right">
+                  <span class="text-slate-400 uppercase text-[10px] font-bold tracking-widest">Payé {{ resume.annee }}</span>
+                  <span class="font-bold text-emerald-700">{{ formatMontant(resume.totalPaye) }}</span>
+                </div>
+                <div class="flex flex-col text-right">
+                  <span class="text-primary uppercase text-[10px] font-bold tracking-widest">Solde {{ resume.annee }}</span>
+                  <span class="font-bold text-primary">{{ formatMontant(resume.totalRestant) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Barre de progression -->
+            <div class="flex items-center gap-3 text-xs text-slate-500">
+              <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-2 rounded-full transition-all"
+                     [style.width.%]="pct"
+                     [class]="getProgressBarClass(pct)">
+                </div>
+              </div>
+              <span class="font-bold" [class]="getPercentageTextClass(pct)">
+                {{ pct }}% payé
+              </span>
+              <div class="flex gap-3 ml-2">
+                <span class="text-red-600 font-semibold">{{ resume.impayees }} impayée(s)</span>
+                <span class="text-amber-600 font-semibold">{{ resume.partielles }} partielle(s)</span>
+                <span class="text-emerald-600 font-semibold">{{ resume.payees }} soldée(s)</span>
+              </div>
+            </div>
+
+            <!-- Tableau détail (seulement si l'année est sélectionnée) -->
+            @if (anneeSelectionnee() === resume.annee) {
+              <!-- Filtres statut -->
+              <div class="flex flex-wrap items-center gap-3">
+                <button (click)="choisirFiltre('all')"
+                  class="px-4 py-1.5 rounded-full text-xs font-bold border transition-colors"
+                  [class.bg-primary]="statutFiltre() === 'all'"
+                  [class.text-white]="statutFiltre() === 'all'"
+                  [class.border-primary]="statutFiltre() === 'all'"
+                  [class.border-slate-200]="statutFiltre() !== 'all'"
+                  [class.text-slate-600]="statutFiltre() !== 'all'">
+                  Toutes ({{ resume.dettes.length }})
+                </button>
+                <button (click)="choisirFiltre('IMPAYEE')"
+                  class="px-4 py-1.5 rounded-full text-xs font-bold border transition-colors"
+                  [class.bg-red-600]="statutFiltre() === 'IMPAYEE'"
+                  [class.text-white]="statutFiltre() === 'IMPAYEE'"
+                  [class.border-red-600]="statutFiltre() === 'IMPAYEE'"
+                  [class.border-slate-200]="statutFiltre() !== 'IMPAYEE'"
+                  [class.text-red-600]="statutFiltre() !== 'IMPAYEE'">
+                  Impayées ({{ resume.impayees }})
+                </button>
+                <button (click)="choisirFiltre('PARTIELLEMENT_PAYEE')"
+                  class="px-4 py-1.5 rounded-full text-xs font-bold border transition-colors"
+                  [class.bg-amber-500]="statutFiltre() === 'PARTIELLEMENT_PAYEE'"
+                  [class.text-white]="statutFiltre() === 'PARTIELLEMENT_PAYEE'"
+                  [class.border-amber-500]="statutFiltre() === 'PARTIELLEMENT_PAYEE'"
+                  [class.border-slate-200]="statutFiltre() !== 'PARTIELLEMENT_PAYEE'"
+                  [class.text-amber-600]="statutFiltre() !== 'PARTIELLEMENT_PAYEE'">
+                  Partielles ({{ resume.partielles }})
+                </button>
+                <button (click)="choisirFiltre('PAYEE')"
+                  class="px-4 py-1.5 rounded-full text-xs font-bold border transition-colors"
+                  [class.bg-emerald-600]="statutFiltre() === 'PAYEE'"
+                  [class.text-white]="statutFiltre() === 'PAYEE'"
+                  [class.border-emerald-600]="statutFiltre() === 'PAYEE'"
+                  [class.border-slate-200]="statutFiltre() !== 'PAYEE'"
+                  [class.text-emerald-600]="statutFiltre() !== 'PAYEE'">
+                  Soldées ({{ resume.payees }})
+                </button>
+              </div>
+
+              <!-- Tableau des dettes avec pagination -->
+              <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider border-b border-slate-200">
+                      <th class="px-6 py-4">Mois</th>
+                      <th class="px-6 py-4">Appartement</th>
+                      <th class="px-6 py-4">Charge</th>
+                      <th class="px-6 py-4 text-right">Montant Initial</th>
+                      <th class="px-6 py-4 text-right">Montant Payé</th>
+                      <th class="px-6 py-4 text-right">Solde Restant</th>
+                      <th class="px-6 py-4 text-center">Statut</th>
+                      <th class="px-6 py-4 text-center">Priorité</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    @if (!pagination.pagedItems().length) {
+                      <tr>
+                        <td colspan="8" class="px-6 py-12 text-center text-slate-400">
+                          <p class="text-3xl mb-2">✅</p>
+                          <p class="font-semibold">Aucune dette pour ce filtre.</p>
+                        </td>
+                      </tr>
+                    } @else {
+                      @for (dette of pagination.pagedItems(); track dette.id) {
+                        @let statutDisplay = getStatutDisplay(dette.statut);
+                        
+                        <tr class="hover:bg-slate-50/70 transition-colors"
+                            [class.bg-red-50]="dette.statut === 'IMPAYEE' || dette.statut === 'PARTIELLEMENT_PAYEE'">
+                          <td class="px-6 py-4 font-medium text-slate-900"
+                              [class.font-bold]="dette.statut === 'IMPAYEE'"
+                              [class.text-red-700]="dette.statut === 'IMPAYEE'">
+                            {{ formatMois(dette.mois) }}
+                          </td>
+                          <td class="px-6 py-4 text-sm">
+                            <span class="font-semibold text-slate-900">
+                              {{ getAppartementLabel(dette.appartementId) }}
+                            </span>
+                          </td>
+                          <td class="px-6 py-4 text-sm text-slate-600">
+                            {{ getChargeLabel(dette.chargeId) }}
+                          </td>
+                          <td class="px-6 py-4 text-right tabular-nums text-sm"
+                              [class.text-red-700]="dette.statut === 'IMPAYEE'"
+                              [class.font-semibold]="dette.statut === 'IMPAYEE'">
+                            {{ formatMontant(dette.montant_original) }}
+                          </td>
+                          <td class="px-6 py-4 text-right tabular-nums text-sm text-emerald-700 font-medium">
+                            {{ formatMontant(dette.montant_paye) }}
+                          </td>
+                          <td class="px-6 py-4 text-right tabular-nums font-bold"
+                              [class.text-red-700]="dette.montant_restant > 0"
+                              [class.text-slate-400]="dette.montant_restant === 0">
+                            {{ formatMontant(dette.montant_restant) }}
+                          </td>
+                          <td class="px-6 py-4 text-center">
+                            <span class="inline-flex items-center gap-1">
+                              <span [class]="statutDisplay.class">{{ statutDisplay.icon }}</span>
+                              <span class="text-xs font-bold"
+                                    [class.text-emerald-700]="dette.statut === 'PAYEE'"
+                                    [class.text-amber-700]="dette.statut === 'PARTIELLEMENT_PAYEE'"
+                                    [class.text-red-700]="dette.statut === 'IMPAYEE'">
+                                {{ statutDisplay.text }}
+                              </span>
+                            </span>
+                          </td>
+                          <td class="px-6 py-4 text-center">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold"
+                                  [class]="getPrioriteClass(dette.priorite)">
+                              {{ dette.priorite || 'NORMALE' }}
+                            </span>
+                          </td>
+                        </tr>
+                      }
+                    }
+                  </tbody>
+                  
+                  <!-- Pied de tableau totaux -->
+                  @if (filteredRows().length > 0) {
+                    <tfoot>
+                      <tr class="bg-slate-50 border-t-2 border-slate-200 font-bold text-sm">
+                        <td class="px-6 py-4 text-slate-700" colspan="3">
+                          Total sélection ({{ filteredRows().length }} ligne(s))
+                        </td>
+                        <td class="px-6 py-4 text-right tabular-nums">
+                          {{ formatMontant(totalFiltreOriginal()) }}
+                        </td>
+                        <td class="px-6 py-4 text-right tabular-nums text-emerald-700">
+                          {{ formatMontant(totalFiltrePaye()) }}
+                        </td>
+                        <td class="px-6 py-4 text-right tabular-nums text-red-600">
+                          {{ formatMontant(totalFiltreRestant()) }}
+                        </td>
+                        <td colspan="2"></td>
+                      </tr>
+                    </tfoot>
+                  }
+                </table>
+                
+                <!-- Pagination -->
+                @if (filteredRows().length > pagination.pageSize()) {
+                  <div class="flex justify-between items-center px-6 py-3 border-t border-slate-100 bg-slate-50">
+                    <button class="px-3 py-1 rounded border text-sm font-bold disabled:opacity-50"
+                            [disabled]="pagination.currentPage() === 1"
+                            (click)="prevPage()">
+                      Précédent
+                    </button>
+                    <span class="text-xs text-slate-500">
+                      Page {{ pagination.currentPage() }} / {{ pagination.totalPages() }}
+                    </span>
+                    <button class="px-3 py-1 rounded border text-sm font-bold disabled:opacity-50"
+                            [disabled]="pagination.currentPage() === pagination.totalPages()"
+                            (click)="nextPage()">
+                      Suivant
+                    </button>
+                  </div>
+                }
+              </div>
+            } @else {
+              <!-- Année non sélectionnée — vue compacte -->
+              @if (resume.totalRestant > 0) {
+                <div class="overflow-hidden rounded-xl border border-slate-200 bg-white/60 backdrop-blur-sm">
+                  <div class="px-6 py-4 flex items-center justify-between">
+                    <p class="text-slate-500 text-sm italic">
+                      Cette année comporte <strong class="text-red-600">{{ formatMontant(resume.totalRestant) }}</strong> 
+                      d'arriérés non régularisés.
+                    </p>
+                    <button (click)="choisirAnnee(resume.annee)"
+                      class="text-primary text-sm font-bold flex items-center gap-1 hover:underline">
+                      Voir le détail ↓
+                    </button>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        }
+
+        @if (!resumeParAnnee().length) {
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-16 text-center text-slate-400">
+            <p class="text-5xl mb-4">📭</p>
+            <p class="font-bold text-slate-700 text-lg">Aucune dette enregistrée.</p>
+            <p class="text-sm mt-2">Lancez la génération des dettes depuis le module dédié.</p>
+            <button routerLink="/generation-dettes"
+              class="mt-5 bg-primary text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-primary/90 transition-colors">
+              ⚡ Générer les dettes
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- FOOTER STICKY -->
+  @if (kpiRestant() > 0) {
+    <footer class="sticky bottom-0 bg-primary text-white py-4 px-6 md:px-10 shadow-[0_-4px_16px_rgba(0,0,0,0.15)] flex flex-wrap items-center justify-between gap-4 z-40">
+      <div class="flex items-center gap-6">
+        <div class="flex flex-col">
+          <span class="text-[10px] uppercase font-bold tracking-widest opacity-70">Reste à payer global</span>
+          <span class="text-2xl font-black tabular-nums">{{ formatMontant(kpiRestant()) }}</span>
+        </div>
+        <div class="h-8 w-px bg-white/20 hidden sm:block"></div>
+        <div class="hidden sm:flex flex-col">
+          <span class="text-[10px] uppercase font-bold tracking-widest opacity-70">Taux de recouvrement</span>
+          <span class="text-sm font-bold">{{ kpiTaux() }}% encaissé</span>
+        </div>
+      </div>
+      <div class="flex gap-3">
+        <button routerLink="/paiements"
+          class="bg-white text-primary px-6 py-2 rounded-lg font-bold text-sm shadow-sm hover:bg-slate-100 transition-colors flex items-center gap-2">
+          <span>💳</span> Enregistrer un paiement
+        </button>
+        <button class="bg-primary/20 border border-white/30 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-primary/40 transition-colors">
+          <span>📤</span> Exporter
+        </button>
+      </div>
+    </footer>
+  }
+</div>

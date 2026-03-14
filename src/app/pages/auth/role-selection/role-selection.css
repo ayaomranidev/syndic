@@ -1,0 +1,402 @@
+/* Role selection layout reworked to match the provided mock (no Tailwind classes required). */
+
+.role-selection {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  background: linear-gradient(135deg, #f5f7fb, #eef2ff);
+  overflow: hidden;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+.role-card-shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  width: 100%;
+  max-width: 1100px;
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 25px 60px rgba(54, 73, 140, 0.18);
+  overflow: hidden;
+  z-index: 1;
+}
+
+.background-blob {
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.35;
+  z-index: 0;
+}
+
+.blob-left {
+  left: -120px;
+  top: 20%;
+  background: #c7d2fe;
+}
+
+.blob-right {
+  right: -100px;
+  bottom: 10%;
+  background: #a5b4fc;
+}
+
+.profile-panel {
+  background: linear-gradient(160deg, #1e1c3b, #37356d);
+  color: #f5f7fb;
+  padding: 40px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  position: relative;
+}
+
+.profile-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.08), transparent 45%),
+    radial-gradient(circle at 90% 10%, rgba(255, 255, 255, 0.06), transparent 40%);
+  pointer-events: none;
+}
+
+.profile-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.avatar {
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7dd3fc, #6366f1);
+  display: grid;
+  place-items: center;
+  font-size: 42px;
+  font-weight: 600;
+  position: relative;
+  box-shadow: 0 10px 35px rgba(99, 102, 241, 0.35);
+}
+
+.avatar-badge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #10b981;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  border: 3px solid #26244a;
+}
+
+.profile-header h2 {
+  margin: 4px 0 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.profile-email {
+  margin: 0;
+  color: #cbd5ff;
+  font-size: 14px;
+}
+
+.profile-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  font-size: 13px;
+  color: #f5f7fb;
+}
+
+.profile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.profile-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: #e2e8ff;
+}
+
+.icon-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  color: #0f172a;
+  background: #e0e7ff;
+}
+
+.icon-circle.success { background: rgba(16, 185, 129, 0.2); color: #bbf7d0; }
+.icon-circle.info { background: rgba(59, 130, 246, 0.2); color: #bfdbfe; }
+.icon-circle.warning { background: rgba(245, 158, 11, 0.2); color: #fde68a; }
+.icon-circle.muted { background: rgba(255, 255, 255, 0.14); color: #f5f7fb; }
+
+.residence-card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 14px 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.residence-title {
+  margin: 0;
+  font-size: 13px;
+  color: #cbd5ff;
+  letter-spacing: 0.2px;
+}
+
+.residence-name {
+  margin: 2px 0 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.residence-sub {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #cbd5ff;
+}
+
+.role-panel {
+  padding: 36px 32px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.role-header {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.role-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+}
+
+.role-header h2 {
+  margin: 0 0 4px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.role-header p {
+  margin: 0;
+  color: #4b5563;
+  font-size: 14px;
+  max-width: 520px;
+}
+
+.role-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.role-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 18px 20px;
+  background: linear-gradient(90deg, #ffffff, #f8f9ff);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.role-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(79, 70, 229, 0.12);
+  border-color: #d9ddff;
+}
+
+.role-item-left {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.role-icon-circle {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  color: #ffffff;
+  flex-shrink: 0;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.role-item-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 6px;
+}
+
+.role-item-desc {
+  font-size: 14px;
+  color: #4b5563;
+  margin-bottom: 10px;
+  max-width: 520px;
+}
+
+.permission-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  max-width: 540px;
+}
+
+.permission-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: #eef2ff;
+  color: #1f2937;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.role-item-cta {
+  font-weight: 700;
+  color: #4338ca;
+  font-size: 14px;
+  background: #e0e7ff;
+  padding: 10px 14px;
+  border-radius: 12px;
+  white-space: nowrap;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.role-item:hover .role-item-cta {
+  background: #4338ca;
+  color: #ffffff;
+}
+
+.info-banner {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: linear-gradient(90deg, #eef2ff, #e0e7ff);
+  border: 1px solid #d9ddff;
+}
+
+.info-title {
+  margin: 0;
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.info-text {
+  margin: 2px 0 0;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.footer-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.logout-button {
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #1f2937;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.logout-button:hover {
+  background: #f3f4f6;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+}
+
+.bg-gradient-role-coproprietaire { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.bg-gradient-role-locataire { background: linear-gradient(135deg, #10b981, #059669); }
+.bg-gradient-role-tresorier { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.bg-gradient-role-president { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+.bg-gradient-role-gardien { background: linear-gradient(135deg, #f97316, #ea580c); }
+.bg-gradient-role-admin { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .role-card-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-panel {
+    border-radius: 24px 24px 0 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .role-selection { padding: 20px; }
+  .role-item { flex-direction: column; align-items: flex-start; }
+  .role-item-cta { align-self: flex-end; }
+  .permission-grid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .role-item, .logout-button { transition: none; }
+}

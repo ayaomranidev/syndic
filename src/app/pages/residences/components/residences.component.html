@@ -1,0 +1,443 @@
+<!-- residences.component.html -->
+<div class="min-h-screen bg-slate-50 px-4 lg:px-10 py-8">
+
+  <!-- ══════════════ HEADER ══════════════ -->
+  <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+    <div>
+      <p class="text-xs font-bold text-primary uppercase tracking-widest mb-1">
+        Tableau de bord — Admin
+      </p>
+      <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">
+        Gestion des Résidences
+      </h1>
+      <p class="text-slate-500 text-sm mt-1">Gérez les résidences et leurs caractéristiques</p>
+    </div>
+    <button
+      class="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90
+             text-white font-semibold text-sm rounded-xl shadow-sm
+             transition-all duration-150 active:scale-95 whitespace-nowrap"
+      type="button"
+      (click)="openModal()">
+      + Nouvelle Résidence
+    </button>
+  </header>
+
+  <!-- ══════════════ STATS ══════════════ -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+    @for (s of stats; track s.title) {
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{{ s.title }}</p>
+        <p class="text-3xl font-black tracking-tight"
+           [class.text-primary]="s.tone === 'primary'"
+           [class.text-emerald-600]="s.tone === 'success'"
+           [class.text-amber-600]="s.tone === 'warning'">
+          {{ s.value }}
+        </p>
+        <p class="text-xs text-slate-400 mt-1">{{ s.delta }}</p>
+      </div>
+    }
+  </div>
+
+  <!-- ══════════════ BARRE RECHERCHE ══════════════ -->
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm px-4 py-3 mb-6 flex items-center gap-3">
+    <span class="text-slate-400 text-lg">🔎</span>
+    <input
+      class="flex-1 bg-transparent text-sm text-slate-700 placeholder-slate-400
+             outline-none border-none focus:ring-0"
+      placeholder="Rechercher une résidence..." />
+  </div>
+
+  <!-- ══════════════ GRILLE RÉSIDENCES ══════════════ -->
+  <section class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    @for (item of residences; track item.name) {
+      <article class="bg-white rounded-2xl border border-slate-200 shadow-sm
+                      hover:shadow-md hover:border-primary/30 transition-all duration-200
+                      overflow-hidden">
+
+        <div class="flex items-start justify-between p-5 pb-4">
+          <!-- Gauche : icône + infos -->
+          <div class="flex items-start gap-4 flex-1 min-w-0">
+            <div class="flex-shrink-0 w-12 h-12 bg-primary/10 text-primary
+                        rounded-xl flex items-center justify-center text-2xl">
+              🏢
+            </div>
+            <div class="min-w-0">
+              <h3 class="text-base font-bold text-slate-900 truncate">{{ item.name }}</h3>
+              <p class="text-xs text-slate-500 mt-0.5">{{ item.address }}</p>
+              <p class="text-xs text-slate-400 mt-0.5">
+                {{ item.buildings }} bâtiment(s) • {{ item.apartments }} appartement(s)
+              </p>
+              <div class="flex flex-wrap gap-1.5 mt-2">
+                <span class="text-[10px] font-bold bg-primary/10 text-primary
+                             px-2 py-0.5 rounded-full">
+                  Charges annuelles
+                </span>
+                <span class="text-[10px] font-bold bg-emerald-50 text-emerald-700
+                             px-2 py-0.5 rounded-full">
+                  Fonds travaux
+                </span>
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      [class.bg-emerald-50]="item.status === 'Actif'"
+                      [class.text-emerald-700]="item.status === 'Actif'"
+                      [class.bg-amber-50]="item.status === 'En attente'"
+                      [class.text-amber-700]="item.status === 'En attente'"
+                      [class.bg-purple-50]="item.status === 'Audit'"
+                      [class.text-purple-700]="item.status === 'Audit'">
+                  {{ item.status }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center gap-1 flex-shrink-0 ml-2">
+            <button
+              class="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-400
+                     hover:text-primary flex items-center justify-center
+                     transition-colors text-sm"
+              type="button"
+              (click)="openDetail(item)"
+              aria-label="Détails">
+              🔍
+            </button>
+            <button
+              class="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-400
+                     hover:text-primary flex items-center justify-center
+                     transition-colors text-sm"
+              type="button"
+              (click)="editResidence(item)"
+              aria-label="Modifier">
+              ✏️
+            </button>
+            <button
+              class="w-8 h-8 rounded-lg hover:bg-red-50 text-slate-400
+                     hover:text-red-500 flex items-center justify-center
+                     transition-colors text-sm"
+              type="button"
+              (click)="deleteResidence(item)"
+              aria-label="Supprimer">
+              🗑️
+            </button>
+          </div>
+        </div>
+
+        <!-- Bas : montants + syndic -->
+        <div class="border-t border-slate-100 px-5 py-3 flex items-center justify-between
+                    bg-slate-50/50">
+          <div class="flex items-center gap-6">
+            <div>
+              <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Charges</p>
+              <p class="text-sm font-bold text-primary tabular-nums">{{ item.annualCharges }} TND</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Fonds</p>
+              <p class="text-sm font-bold text-emerald-600 tabular-nums">{{ item.fund }} TND</p>
+            </div>
+          </div>
+          <p class="text-xs text-slate-500">
+            <span class="font-semibold">Syndic :</span> {{ item.manager }}
+          </p>
+        </div>
+      </article>
+    }
+
+    <!-- Empty state -->
+    @if (residences.length === 0) {
+      <div class="col-span-2 bg-white rounded-2xl border border-slate-200
+                  flex flex-col items-center justify-center py-20 text-center">
+        <span class="text-5xl mb-4">🏢</span>
+        <p class="text-lg font-bold text-slate-700">Aucune résidence</p>
+        <p class="text-slate-400 text-sm mt-1">Cliquez sur "Nouvelle Résidence" pour commencer.</p>
+      </div>
+    }
+  </section>
+
+  <!-- ══════════════ DETAIL MODAL ══════════════ -->
+  @if (detailResidence) {
+    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50
+                flex items-center justify-center p-4"
+         (click)="closeDetail()"
+         role="presentation">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh]
+                  overflow-y-auto flex flex-col"
+           role="dialog" aria-modal="true" aria-label="Détails résidence"
+           (click)="$event.stopPropagation()">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+          <div>
+            <p class="text-xs font-bold text-primary uppercase tracking-widest">Détails</p>
+            <h3 class="text-xl font-bold text-slate-900 mt-0.5">{{ detailResidence.name }}</h3>
+          </div>
+          <button
+            class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200
+                   text-slate-500 hover:text-slate-700 flex items-center justify-center
+                   text-lg font-bold transition-colors"
+            type="button" aria-label="Fermer" (click)="closeDetail()">
+            ✕
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="p-6 grid grid-cols-2 gap-4">
+          <div>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Adresse</p>
+            <p class="text-sm font-semibold text-slate-800">{{ detailResidence.address || '-' }}</p>
+          </div>
+          <div>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ville</p>
+            <p class="text-sm font-semibold text-slate-800">{{ detailResidence.city || '-' }}</p>
+          </div>
+          <div>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bâtiments</p>
+            <p class="text-sm font-semibold text-slate-800">{{ detailResidence.buildings || 0 }}</p>
+          </div>
+          <div>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Appartements</p>
+            <p class="text-sm font-semibold text-slate-800">{{ detailResidence.apartments || 0 }}</p>
+          </div>
+          <div>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Charges annuelles</p>
+            <p class="text-sm font-semibold text-primary">{{ detailResidence.annualCharges || '0' }} TND</p>
+          </div>
+          <div>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fonds travaux</p>
+            <p class="text-sm font-semibold text-emerald-600">{{ detailResidence.fund || '0' }} TND</p>
+          </div>
+          <div>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Syndic</p>
+            <p class="text-sm font-semibold text-slate-800">{{ detailResidence.manager || '-' }}</p>
+          </div>
+          <div>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Statut</p>
+            <span class="inline-block text-xs font-bold px-2.5 py-0.5 rounded-full"
+                  [class.bg-emerald-50]="detailResidence.status === 'Actif'"
+                  [class.text-emerald-700]="detailResidence.status === 'Actif'"
+                  [class.bg-amber-50]="detailResidence.status === 'En attente'"
+                  [class.text-amber-700]="detailResidence.status === 'En attente'"
+                  [class.bg-purple-50]="detailResidence.status === 'Audit'"
+                  [class.text-purple-700]="detailResidence.status === 'Audit'">
+              {{ detailResidence.status || '-' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex justify-end px-6 py-4 border-t border-slate-100">
+          <button
+            class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600
+                   hover:bg-slate-50 font-semibold text-sm transition-colors"
+            type="button" (click)="closeDetail()">
+            Fermer
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ══════════════ MODAL ══════════════ -->
+  @if (isModalOpen) {
+    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50
+                flex items-center justify-center p-4"
+         (click)="closeModal()"
+         role="presentation">
+
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh]
+                  overflow-y-auto flex flex-col"
+           role="dialog" aria-modal="true" aria-label="Résidence"
+           (click)="$event.stopPropagation()">
+
+        <!-- Header modal -->
+        <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100 flex-shrink-0">
+          <div>
+            <p class="text-xs font-bold text-primary uppercase tracking-widest">Fiche résidence</p>
+            <h3 class="text-xl font-bold text-slate-900 mt-0.5">
+              {{ editingResidence ? 'Modifier la résidence' : 'Nouvelle Résidence' }}
+            </h3>
+          </div>
+          <button
+            class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200
+                   text-slate-500 hover:text-slate-700 flex items-center justify-center
+                   text-lg font-bold transition-colors"
+            type="button"
+            aria-label="Fermer"
+            (click)="closeModal()">
+            ✕
+          </button>
+        </div>
+
+        <!-- Corps du formulaire -->
+        <form class="p-6 flex flex-col gap-5" (ngSubmit)="saveResidence()">
+
+          <!-- Ligne 1 -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label class="flex flex-col gap-1.5">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                Nom de la résidence *
+              </span>
+              <input
+                class="rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm
+                       text-slate-900 placeholder-slate-400 bg-white
+                       focus:outline-none focus:ring-2 focus:ring-primary/30
+                       focus:border-primary transition-all"
+                name="name" [(ngModel)]="form.name"
+                placeholder="Ex: Résidence Les Jardins" required />
+            </label>
+            <label class="flex flex-col gap-1.5">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                Année de construction *
+              </span>
+              <input
+                class="rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm
+                       text-slate-900 bg-white focus:outline-none focus:ring-2
+                       focus:ring-primary/30 focus:border-primary transition-all"
+                name="year" type="number" [(ngModel)]="form.year" required />
+            </label>
+          </div>
+
+          <!-- Ligne 2 -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label class="flex flex-col gap-1.5">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Adresse *</span>
+              <input
+                class="rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm
+                       text-slate-900 placeholder-slate-400 bg-white
+                       focus:outline-none focus:ring-2 focus:ring-primary/30
+                       focus:border-primary transition-all"
+                name="address" [(ngModel)]="form.address"
+                placeholder="123 Avenue des Fleurs" required />
+            </label>
+            <label class="flex flex-col gap-1.5">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Code postal</span>
+              <input
+                class="rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm
+                       text-slate-900 placeholder-slate-400 bg-white
+                       focus:outline-none focus:ring-2 focus:ring-primary/30
+                       focus:border-primary transition-all"
+                name="postal" [(ngModel)]="form.postal" placeholder="75000" />
+            </label>
+          </div>
+
+          <!-- Ligne 3 -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <label class="flex flex-col gap-1.5">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Ville *</span>
+              <input
+                class="rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm
+                       text-slate-900 placeholder-slate-400 bg-white
+                       focus:outline-none focus:ring-2 focus:ring-primary/30
+                       focus:border-primary transition-all"
+                name="city" [(ngModel)]="form.city" placeholder="Paris" />
+            </label>
+            <label class="flex flex-col gap-1.5">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Pays *</span>
+              <input
+                class="rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm
+                       text-slate-900 bg-white focus:outline-none focus:ring-2
+                       focus:ring-primary/30 focus:border-primary transition-all"
+                name="country" [(ngModel)]="form.country" />
+            </label>
+            <label class="flex flex-col gap-1.5">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Superficie (m²)</span>
+              <input
+                class="rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm
+                       text-slate-900 bg-white focus:outline-none focus:ring-2
+                       focus:ring-primary/30 focus:border-primary transition-all"
+                name="area" type="number" [(ngModel)]="form.area" />
+            </label>
+          </div>
+
+          <!-- Ligne 4 -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <label class="flex flex-col gap-1.5">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Charges annuelles (TND)</span>
+              <input
+                class="rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm
+                       text-slate-900 bg-white focus:outline-none focus:ring-2
+                       focus:ring-primary/30 focus:border-primary transition-all"
+                name="annualCharges" type="number" [(ngModel)]="form.annualCharges" />
+            </label>
+            <label class="flex flex-col gap-1.5">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Fonds travaux (TND)</span>
+              <input
+                class="rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm
+                       text-slate-900 bg-white focus:outline-none focus:ring-2
+                       focus:ring-primary/30 focus:border-primary transition-all"
+                name="fund" type="number" [(ngModel)]="form.fund" />
+            </label>
+            <label class="flex flex-col gap-1.5">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Bâtiments</span>
+              <input
+                class="rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm
+                       text-slate-900 bg-white focus:outline-none focus:ring-2
+                       focus:ring-primary/30 focus:border-primary transition-all"
+                name="buildings" type="number" [(ngModel)]="form.buildings" />
+            </label>
+          </div>
+
+          <!-- Syndic -->
+          <div class="border-t border-slate-100 pt-4">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
+              Informations du syndic
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <label class="flex flex-col gap-1.5">
+                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Nom du syndic *</span>
+                <input
+                  class="rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm
+                         text-slate-900 bg-white focus:outline-none focus:ring-2
+                         focus:ring-primary/30 focus:border-primary transition-all"
+                  name="manager" [(ngModel)]="form.manager" />
+              </label>
+              <label class="flex flex-col gap-1.5">
+                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Téléphone *</span>
+                <input
+                  class="rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm
+                         text-slate-900 bg-white focus:outline-none focus:ring-2
+                         focus:ring-primary/30 focus:border-primary transition-all"
+                  name="syndicPhone" [(ngModel)]="form.syndicPhone" />
+              </label>
+              <label class="flex flex-col gap-1.5">
+                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Email *</span>
+                <input
+                  class="rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm
+                         text-slate-900 bg-white focus:outline-none focus:ring-2
+                         focus:ring-primary/30 focus:border-primary transition-all"
+                  name="syndicEmail" type="email" [(ngModel)]="form.syndicEmail" />
+              </label>
+            </div>
+          </div>
+
+          <!-- Checkbox -->
+          <label class="flex items-center gap-3 cursor-pointer select-none">
+            <input
+              class="w-4 h-4 rounded border-slate-300 text-primary
+                     focus:ring-primary/30 accent-primary"
+              type="checkbox" name="hasReglement" [(ngModel)]="form.hasReglement" />
+            <span class="text-sm text-slate-700 font-medium">
+              Règlement de copropriété disponible
+            </span>
+          </label>
+
+          <!-- Footer modal -->
+          <div class="flex items-center justify-end gap-3 border-t border-slate-100 pt-5">
+            <button
+              class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600
+                     hover:bg-slate-50 font-semibold text-sm transition-colors"
+              type="button"
+              (click)="closeModal()">
+              Annuler
+            </button>
+            <button
+              class="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/90
+                     text-white font-semibold text-sm shadow-sm
+                     transition-all active:scale-95"
+              type="submit">
+              {{ editingResidence ? 'Mettre à jour' : 'Créer la résidence' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>

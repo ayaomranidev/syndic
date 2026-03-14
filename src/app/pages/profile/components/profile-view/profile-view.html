@@ -1,0 +1,435 @@
+<!-- ============================================================
+  profile-view.html — MIGRÉ TAILWIND CSS
+  Supprime : styleUrl: './profile-view.css'
+============================================================ -->
+
+<section
+  class="min-h-screen bg-slate-50 px-4 lg:px-10 py-8"
+  [attr.aria-busy]="loading()">
+
+  <!-- ══════════════ HEADER ══════════════ -->
+  <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+    <div>
+      <p class="text-xs font-bold text-blue-600 uppercase tracking-widest mb-1">Mon compte</p>
+      <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Mon profil</h1>
+      <p class="text-slate-500 text-sm mt-1">Gérez vos informations personnelles et votre mot de passe</p>
+    </div>
+
+    <!-- Messages de succès / erreur -->
+    <div class="flex flex-col gap-2">
+      @if (message()) {
+        <p class="flex items-center gap-2 bg-emerald-50 border border-emerald-200
+                  text-emerald-700 text-sm font-medium px-4 py-2 rounded-xl">
+          ✅ {{ message() }}
+        </p>
+      }
+      @if (error()) {
+        <p class="flex items-center gap-2 bg-red-50 border border-red-200
+                  text-red-700 text-sm font-medium px-4 py-2 rounded-xl">
+          ⚠️ {{ error() }}
+        </p>
+      }
+    </div>
+  </header>
+
+  <!-- ══════════════ SKELETON ══════════════ -->
+  @if (loading()) {
+    <div class="flex flex-col gap-4 animate-pulse">
+      <div class="h-40 bg-slate-200 rounded-2xl"></div>
+      <div class="h-32 bg-slate-200 rounded-2xl"></div>
+      <div class="h-24 bg-slate-100 rounded-2xl"></div>
+    </div>
+  } @else {
+    @if (profile(); as user) {
+
+      <!-- ══════════════ LAYOUT 2 COLONNES ══════════════ -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- ── COLONNE PRINCIPALE (2/3) ── -->
+        <div class="lg:col-span-2 flex flex-col gap-6">
+
+          <!-- ── Card : Identité + formulaire profil ── -->
+          <article class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+
+            <!-- Header card -->
+            <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+              <div class="flex items-center gap-4">
+                <!-- Avatar initiale -->
+                <div class="w-14 h-14 bg-blue-600 text-white rounded-2xl
+                            flex items-center justify-center font-black text-xl
+                            flex-shrink-0" aria-hidden="true">
+                  {{ (user.fullname || user.email).charAt(0).toUpperCase() }}
+                </div>
+                <div>
+                  <p class="text-lg font-bold text-slate-900">{{ user.fullname || 'Utilisateur' }}</p>
+                  <div class="flex items-center gap-2 mt-1">
+                    <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full"
+                          [class]="roleInfo().color">
+                      {{ roleInfo().label }}
+                    </span>
+                    <span class="text-[11px] font-bold px-2.5 py-0.5 rounded-full
+                                 bg-emerald-50 text-emerald-700">
+                      Actif
+                    </span>
+                  </div>
+                </div>
+              </div>
+              @if (!isEditing()) {
+                <button
+                  type="button"
+                  class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white
+                         font-semibold text-sm rounded-xl shadow-sm
+                         transition-all active:scale-95"
+                  (click)="isEditing.set(true)">
+                  ✏️ Modifier
+                </button>
+              }
+            </div>
+
+            <!-- Mode lecture -->
+            @if (!isEditing()) {
+              <dl class="divide-y divide-slate-100">
+                <div class="flex items-center justify-between px-6 py-3.5">
+                  <dt class="text-xs font-bold text-slate-500 uppercase tracking-wider w-36">Email</dt>
+                  <dd class="text-sm text-slate-800 font-medium">{{ user.email }}</dd>
+                </div>
+                <div class="flex items-center justify-between px-6 py-3.5">
+                  <dt class="text-xs font-bold text-slate-500 uppercase tracking-wider w-36">Téléphone</dt>
+                  <dd class="text-sm text-slate-800">{{ user.phone || 'Non renseigné' }}</dd>
+                </div>
+                <div class="flex items-center justify-between px-6 py-3.5">
+                  <dt class="text-xs font-bold text-slate-500 uppercase tracking-wider w-36">Résidence</dt>
+                  <dd class="text-sm text-slate-800">{{ user.residence || 'Non spécifiée' }}</dd>
+                </div>
+                <div class="flex items-center justify-between px-6 py-3.5">
+                  <dt class="text-xs font-bold text-slate-500 uppercase tracking-wider w-36">Localisation</dt>
+                  <dd class="text-sm text-slate-800">
+                    {{ (user.batiment || 'Non précisé') + ' • ' + (user.lot || 'Non précisé') }}
+                  </dd>
+                </div>
+                <div class="flex items-center justify-between px-6 py-3.5">
+                  <dt class="text-xs font-bold text-slate-500 uppercase tracking-wider w-36">Inscription</dt>
+                  <dd class="text-sm text-slate-800 tabular-nums">
+                    {{ asDate(user.createdAt) ? (asDate(user.createdAt) | date:'dd/MM/yyyy') : 'N/A' }}
+                  </dd>
+                </div>
+              </dl>
+
+            <!-- Mode édition -->
+            } @else {
+              <form
+                class="p-6 flex flex-col gap-5"
+                [formGroup]="profileForm"
+                (ngSubmit)="saveProfile()"
+                novalidate>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <label class="flex flex-col gap-1.5">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Nom complet *</span>
+                    <input
+                      class="rounded-xl border px-3.5 py-2.5 text-sm
+                             focus:outline-none focus:ring-2 focus:ring-blue-500/30
+                             focus:border-blue-500 transition-all"
+                      [class.border-slate-200]="!profileForm.controls.fullname.invalid || !profileForm.controls.fullname.touched"
+                      [class.border-red-400]="profileForm.controls.fullname.invalid && profileForm.controls.fullname.touched"
+                      type="text" formControlName="fullname" autocomplete="name" />
+                    @if (profileForm.controls.fullname.invalid && profileForm.controls.fullname.touched) {
+                      <small class="text-xs text-red-500">Le nom est requis.</small>
+                    }
+                  </label>
+
+                  <label class="flex flex-col gap-1.5">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Email *</span>
+                    <input
+                      class="rounded-xl border px-3.5 py-2.5 text-sm
+                             focus:outline-none focus:ring-2 focus:ring-blue-500/30
+                             focus:border-blue-500 transition-all"
+                      [class.border-slate-200]="!profileForm.controls.email.invalid || !profileForm.controls.email.touched"
+                      [class.border-red-400]="profileForm.controls.email.invalid && profileForm.controls.email.touched"
+                      type="email" formControlName="email" autocomplete="email" />
+                    @if (profileForm.controls.email.invalid && profileForm.controls.email.touched) {
+                      <small class="text-xs text-red-500">Email invalide.</small>
+                    }
+                  </label>
+
+                  <label class="flex flex-col gap-1.5">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Téléphone</span>
+                    <input
+                      class="rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm
+                             focus:outline-none focus:ring-2 focus:ring-blue-500/30
+                             focus:border-blue-500 transition-all"
+                      type="tel" formControlName="phone" autocomplete="tel" />
+                  </label>
+
+                  <label class="flex flex-col gap-1.5">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Résidence</span>
+                    <input
+                      class="rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm
+                             focus:outline-none focus:ring-2 focus:ring-blue-500/30
+                             focus:border-blue-500 transition-all"
+                      type="text" formControlName="residence" />
+                  </label>
+
+                  <label class="flex flex-col gap-1.5">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Bâtiment</span>
+                    <input
+                      class="rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm
+                             focus:outline-none focus:ring-2 focus:ring-blue-500/30
+                             focus:border-blue-500 transition-all"
+                      type="text" formControlName="batiment" />
+                  </label>
+
+                  <label class="flex flex-col gap-1.5">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Lot / Appartement</span>
+                    <input
+                      class="rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm
+                             focus:outline-none focus:ring-2 focus:ring-blue-500/30
+                             focus:border-blue-500 transition-all"
+                      type="text" formControlName="lot" />
+                  </label>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 border-t border-slate-100 pt-5">
+                  <button
+                    type="button"
+                    class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600
+                           hover:bg-slate-50 font-semibold text-sm transition-colors"
+                    (click)="resetProfileForm()">
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700
+                           text-white font-semibold text-sm shadow-sm
+                           transition-all active:scale-95
+                           disabled:opacity-50 disabled:cursor-not-allowed"
+                    [disabled]="savingProfile()">
+                    {{ savingProfile() ? 'Enregistrement...' : 'Enregistrer' }}
+                  </button>
+                </div>
+              </form>
+            }
+          </article>
+
+          <!-- ── Card : Mot de passe ── -->
+          <article class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+              <div>
+                <p class="text-base font-bold text-slate-900">🔐 Mot de passe</p>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  Changez votre mot de passe pour sécuriser votre compte
+                </p>
+              </div>
+              @if (!isChangingPassword()) {
+                <button
+                  type="button"
+                  class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600
+                         hover:bg-slate-50 font-semibold text-sm transition-colors"
+                  (click)="isChangingPassword.set(true)">
+                  Changer
+                </button>
+              }
+            </div>
+
+            @if (isChangingPassword()) {
+              <form
+                class="p-6 flex flex-col gap-5"
+                [formGroup]="passwordForm"
+                (ngSubmit)="changePassword()"
+                novalidate>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                  <!-- Mot de passe actuel -->
+                  <label class="flex flex-col gap-1.5 sm:col-span-2">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Mot de passe actuel *
+                    </span>
+                    <div class="flex items-center gap-2 rounded-xl border border-slate-200
+                                px-3.5 py-1 focus-within:ring-2 focus-within:ring-blue-500/30
+                                focus-within:border-blue-500 transition-all bg-white">
+                      <input
+                        class="flex-1 text-sm py-1.5 bg-transparent outline-none border-none focus:ring-0"
+                        [type]="showCurrentPassword() ? 'text' : 'password'"
+                        formControlName="currentPassword"
+                        autocomplete="current-password" />
+                      <button
+                        type="button"
+                        class="text-slate-400 hover:text-slate-600 transition-colors"
+                        (click)="showCurrentPassword.set(!showCurrentPassword())"
+                        aria-label="Afficher le mot de passe actuel">
+                        {{ showCurrentPassword() ? '👁️' : '🙈' }}
+                      </button>
+                    </div>
+                    @if (passwordForm.controls.currentPassword.invalid && passwordForm.controls.currentPassword.touched) {
+                      <small class="text-xs text-red-500">Champ requis.</small>
+                    }
+                  </label>
+
+                  <!-- Nouveau mot de passe -->
+                  <label class="flex flex-col gap-1.5">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Nouveau mot de passe *
+                    </span>
+                    <div class="flex items-center gap-2 rounded-xl border border-slate-200
+                                px-3.5 py-1 focus-within:ring-2 focus-within:ring-blue-500/30
+                                focus-within:border-blue-500 transition-all bg-white">
+                      <input
+                        class="flex-1 text-sm py-1.5 bg-transparent outline-none border-none focus:ring-0"
+                        [type]="showNewPassword() ? 'text' : 'password'"
+                        formControlName="newPassword"
+                        autocomplete="new-password" />
+                      <button
+                        type="button"
+                        class="text-slate-400 hover:text-slate-600 transition-colors"
+                        (click)="showNewPassword.set(!showNewPassword())"
+                        aria-label="Afficher le nouveau mot de passe">
+                        {{ showNewPassword() ? '👁️' : '🙈' }}
+                      </button>
+                    </div>
+                    @if (passwordForm.controls.newPassword.invalid && passwordForm.controls.newPassword.touched) {
+                      <small class="text-xs text-red-500">Au moins 6 caractères.</small>
+                    }
+                  </label>
+
+                  <!-- Confirmer -->
+                  <label class="flex flex-col gap-1.5">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Confirmer *
+                    </span>
+                    <div class="flex items-center gap-2 rounded-xl border border-slate-200
+                                px-3.5 py-1 focus-within:ring-2 focus-within:ring-blue-500/30
+                                focus-within:border-blue-500 transition-all bg-white">
+                      <input
+                        class="flex-1 text-sm py-1.5 bg-transparent outline-none border-none focus:ring-0"
+                        [type]="showConfirmPassword() ? 'text' : 'password'"
+                        formControlName="confirmPassword"
+                        autocomplete="new-password" />
+                      <button
+                        type="button"
+                        class="text-slate-400 hover:text-slate-600 transition-colors"
+                        (click)="showConfirmPassword.set(!showConfirmPassword())"
+                        aria-label="Confirmer le mot de passe">
+                        {{ showConfirmPassword() ? '👁️' : '🙈' }}
+                      </button>
+                    </div>
+                    @if (passwordForm.controls.confirmPassword.invalid && passwordForm.controls.confirmPassword.touched) {
+                      <small class="text-xs text-red-500">Champ requis.</small>
+                    }
+                  </label>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 border-t border-slate-100 pt-5">
+                  <button
+                    type="button"
+                    class="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600
+                           hover:bg-slate-50 font-semibold text-sm transition-colors"
+                    (click)="isChangingPassword.set(false); passwordForm.reset();">
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700
+                           text-white font-semibold text-sm shadow-sm
+                           transition-all active:scale-95
+                           disabled:opacity-50 disabled:cursor-not-allowed"
+                    [disabled]="savingPassword()">
+                    {{ savingPassword() ? 'Mise à jour...' : 'Mettre à jour le mot de passe' }}
+                  </button>
+                </div>
+              </form>
+            } @else {
+              <div class="px-6 py-5">
+                <p class="text-sm text-slate-500">
+                  Votre mot de passe est sécurisé. Cliquez sur "Changer" pour le modifier.
+                </p>
+              </div>
+            }
+          </article>
+        </div>
+
+        <!-- ── COLONNE LATÉRALE (1/3) ── -->
+        <aside class="flex flex-col gap-5">
+
+          <!-- Card sécurité -->
+          <article class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-100">
+              <p class="text-sm font-bold text-slate-900">🛡️ Sécurité du compte</p>
+            </div>
+            <ul class="divide-y divide-slate-100">
+              <li class="px-5 py-3 flex items-center gap-3">
+                <span class="w-7 h-7 bg-emerald-100 text-emerald-600 rounded-full
+                             flex items-center justify-center text-sm flex-shrink-0">✓</span>
+                <div>
+                  <p class="text-sm font-semibold text-slate-800">Compte vérifié</p>
+                  <p class="text-xs text-slate-400">Email confirmé</p>
+                </div>
+              </li>
+              <li class="px-5 py-3 flex items-center gap-3">
+                <span class="w-7 h-7 bg-emerald-100 text-emerald-600 rounded-full
+                             flex items-center justify-center text-sm flex-shrink-0">✓</span>
+                <div>
+                  <p class="text-sm font-semibold text-slate-800">Connexion sécurisée</p>
+                  <p class="text-xs text-slate-400">HTTPS activé</p>
+                </div>
+              </li>
+              <li class="px-5 py-3 flex items-center gap-3">
+                <span class="w-7 h-7 bg-blue-100 text-blue-600 rounded-full
+                             flex items-center justify-center text-sm flex-shrink-0">🕐</span>
+                <div>
+                  <p class="text-sm font-semibold text-slate-800">Dernière connexion</p>
+                  <p class="text-xs text-slate-400">Aujourd'hui, 10:30</p>
+                </div>
+              </li>
+            </ul>
+          </article>
+
+          <!-- Card activité -->
+          <article class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-100">
+              <p class="text-sm font-bold text-slate-900">📊 Votre activité</p>
+            </div>
+            <ul class="divide-y divide-slate-100">
+              <li class="px-5 py-3 flex items-center justify-between">
+                <span class="text-sm text-slate-600">Paiements effectués</span>
+                <span class="text-sm font-black text-slate-900 tabular-nums">3</span>
+              </li>
+              <li class="px-5 py-3 flex items-center justify-between">
+                <span class="text-sm text-slate-600">Signalements envoyés</span>
+                <span class="text-sm font-black text-slate-900 tabular-nums">2</span>
+              </li>
+              <li class="px-5 py-3 flex items-center justify-between">
+                <span class="text-sm text-slate-600">Documents consultés</span>
+                <span class="text-sm font-black text-slate-900 tabular-nums">12</span>
+              </li>
+              <li class="px-5 py-3 flex items-center justify-between">
+                <span class="text-sm text-slate-600">Votes participés</span>
+                <span class="text-sm font-black text-slate-900 tabular-nums">5</span>
+              </li>
+            </ul>
+          </article>
+
+          <!-- Card aide -->
+          <article class="bg-blue-50 border border-blue-100 rounded-2xl p-5">
+            <p class="text-sm font-bold text-blue-900 mb-1">💬 Besoin d'aide ?</p>
+            <p class="text-xs text-blue-700 mb-4 leading-relaxed">
+              Pour toute question concernant votre compte, contactez le support.
+            </p>
+            <button
+              type="button"
+              class="text-sm font-semibold text-blue-600 hover:text-blue-800
+                     underline underline-offset-2 transition-colors">
+              Contacter le support →
+            </button>
+          </article>
+        </aside>
+      </div>
+
+    } @else {
+      <div class="flex flex-col items-center justify-center py-20">
+        <span class="text-5xl mb-4">👤</span>
+        <p class="text-slate-600 font-semibold">Aucun profil trouvé.</p>
+      </div>
+    }
+  }
+</section>

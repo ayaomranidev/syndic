@@ -1,0 +1,814 @@
+<div class="min-h-screen bg-slate-50 px-3 sm:px-4 lg:px-6 xl:px-10 py-4 sm:py-6 lg:py-8">
+
+  <!-- ══════════════ HEADER ══════════════ -->
+  <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+    <div>
+      <p class="text-[10px] sm:text-xs font-bold text-primary uppercase tracking-widest mb-0.5 sm:mb-1">
+        Tableau de bord — Admin
+      </p>
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+        Gestion des utilisateurs
+      </h1>
+      <p class="text-slate-500 text-xs sm:text-sm mt-0.5 sm:mt-1">Gérez les comptes, rôles et statuts</p>
+    </div>
+    <button
+      class="w-full sm:w-auto px-4 sm:px-5 py-2 sm:py-2.5 bg-primary hover:bg-primary/90 text-white
+             font-semibold text-xs sm:text-sm rounded-lg sm:rounded-xl shadow-sm
+             transition-all active:scale-95 whitespace-nowrap flex items-center justify-center gap-1"
+      type="button"
+      (click)="openModal()">
+      <span class="text-base sm:text-lg">+</span>
+      <span class="hidden xs:inline">Créer un utilisateur</span>
+      <span class="xs:hidden">Ajouter</span>
+    </button>
+  </header>
+
+  <!-- ══════════════ STATS ══════════════ -->
+  <div class="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 lg:gap-4 mb-6 sm:mb-8">
+    <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-4 lg:p-5">
+      <p class="text-[9px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 sm:mb-2 truncate">Total utilisateurs</p>
+      <p class="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tabular-nums">{{ stats().total }}</p>
+    </div>
+    <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-4 lg:p-5">
+      <p class="text-[9px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 sm:mb-2 truncate">Actifs</p>
+      <p class="text-xl sm:text-2xl lg:text-3xl font-black text-emerald-600 tabular-nums">{{ stats().actifs }}</p>
+    </div>
+    <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-4 lg:p-5">
+      <p class="text-[9px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 sm:mb-2 truncate">Admins Globaux</p>
+      <p class="text-xl sm:text-2xl lg:text-3xl font-black text-red-600 tabular-nums">{{ stats().admins || 0 }}</p>
+    </div>
+    <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-4 lg:p-5">
+      <p class="text-[9px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 sm:mb-2 truncate">Admins Résidence</p>
+      <p class="text-xl sm:text-2xl lg:text-3xl font-black text-purple-600 tabular-nums">{{ stats().adminResidences || 0 }}</p>
+    </div>
+    <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-4 lg:p-5">
+      <p class="text-[9px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 sm:mb-2 truncate">Copropriétaires</p>
+      <p class="text-xl sm:text-2xl lg:text-3xl font-black text-primary tabular-nums">{{ stats().copro }}</p>
+    </div>
+  </div>
+
+  <!-- ══════════════ FILTRES ══════════════ -->
+  <div class="bg-white border border-slate-200 rounded-xl sm:rounded-2xl shadow-sm px-3 sm:px-4 py-2 sm:py-3 mb-4 sm:mb-6
+              flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+
+    <!-- Recherche -->
+    <div class="flex items-center gap-1.5 sm:gap-2 flex-1 w-full sm:w-auto min-w-[140px] sm:min-w-[180px]">
+      <span class="text-slate-400 text-sm sm:text-base" aria-hidden="true">🔎</span>
+      <input
+        class="flex-1 bg-transparent text-xs sm:text-sm text-slate-700 placeholder-slate-400
+               outline-none border-none focus:ring-0 py-1.5"
+        aria-label="Rechercher un utilisateur"
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+        name="searchInput"
+        placeholder="Rechercher..." />
+    </div>
+
+    <div class="w-full h-px sm:w-px sm:h-6 bg-slate-200 sm:block"></div>
+
+    <!-- Filtres en ligne -->
+    <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+      <!-- Filtre statut -->
+      <label class="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-semibold text-slate-500">
+        <span class="hidden sm:inline">Statut</span>
+        <select
+          class="text-xs sm:text-sm text-slate-600 border border-slate-200 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2
+                 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30
+                 focus:border-primary transition-all cursor-pointer font-normal min-w-[100px]"
+          [ngModel]="statusFilter()"
+          (ngModelChange)="statusFilter.set($event)"
+          name="statusFilter">
+          <option value="all">Tous</option>
+          <option value="active">Actif</option>
+          <option value="inactive">Inactif</option>
+        </select>
+      </label>
+
+      <!-- Filtre rôle -->
+      <label class="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-semibold text-slate-500">
+        <span class="hidden sm:inline">Rôle</span>
+        <select
+          class="text-xs sm:text-sm text-slate-600 border border-slate-200 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2
+                 bg-white focus:outline-none focus:ring-2 focus:ring-primary/30
+                 focus:border-primary transition-all cursor-pointer font-normal min-w-[120px]"
+          [ngModel]="roleFilter()"
+          (ngModelChange)="setRoleFilter($event)"
+          name="roleFilter">
+          <option value="all">Tous</option>
+          <option value="ADMIN">Admin Global</option>
+          <option value="ADMIN_RESIDENCE">Admin Résidence</option>
+          <option value="COPROPRIETAIRE">Copropriétaire</option>
+          <option value="LOCATAIRE">Locataire</option>
+          <option value="TRESORIER">Trésorier</option>
+          <option value="PRESIDENT">Président</option>
+          <option value="GARDIEN">Gardien</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <!-- ══════════════ TABLE / CARTES ══════════════ -->
+
+  <!-- Version mobile : cartes -->
+  <div class="block lg:hidden">
+    @if (filteredUsers().length === 0) {
+      <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 p-6 sm:p-8 text-center">
+        <div class="flex flex-col items-center">
+          <span class="text-3xl sm:text-4xl mb-2 sm:mb-3">😶</span>
+          <p class="text-sm sm:text-base text-slate-700 font-semibold">Aucun utilisateur trouvé</p>
+          <p class="text-slate-400 text-xs sm:text-sm mt-1">Modifiez vos filtres ou créez un compte.</p>
+        </div>
+      </div>
+    }
+    <div class="space-y-3 sm:space-y-4">
+      @for (user of filteredUsers(); track (user.firebaseUid ?? user.id)) {
+        <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+
+          <!-- En-tête de la carte -->
+          <div class="p-3 sm:p-4 border-b border-slate-100">
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-2 sm:gap-3">
+                <div class="w-8 h-8 sm:w-10 sm:h-10 bg-primary text-white rounded-full
+                            flex items-center justify-center font-bold text-sm sm:text-base flex-shrink-0">
+                  {{ user.name.charAt(0).toUpperCase() }}
+                </div>
+                <div>
+                  <p class="font-semibold text-sm sm:text-base text-slate-900">{{ user.name }}</p>
+                  <p class="text-[10px] sm:text-xs text-slate-400 mt-0.5">{{ user.email }}</p>
+                </div>
+              </div>
+              <button
+                class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-slate-100 text-slate-400
+                       hover:text-slate-600 flex items-center justify-center
+                       transition-colors text-xs sm:text-sm"
+                type="button" aria-label="Détails"
+                (click)="openDetail(user)">
+                🔍
+              </button>
+              <button
+                class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg hover:bg-primary/10 text-slate-400
+                       hover:text-primary flex items-center justify-center
+                       transition-colors text-xs sm:text-sm"
+                type="button" aria-label="Modifier"
+                (click)="openModal(user)">
+                ✏️
+              </button>
+            </div>
+          </div>
+
+          <!-- Corps de la carte -->
+          <div class="p-3 sm:p-4">
+            <div class="grid grid-cols-2 gap-2 sm:gap-3 mb-3">
+              <!-- Rôles -->
+              <div>
+                <p class="text-[8px] sm:text-[9px] text-slate-400 font-semibold uppercase mb-1">Rôles</p>
+                <div class="flex flex-wrap gap-1">
+                  @for (role of user.roles; track role) {
+                    <span class="text-[8px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                          [class]="roleClass(role)">
+                      {{ roleLabel(role) }}
+                    </span>
+                  }
+                </div>
+              </div>
+              <!-- Statut -->
+              <div>
+                <p class="text-[8px] sm:text-[9px] text-slate-400 font-semibold uppercase mb-1">Statut</p>
+                <span class="text-[8px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full inline-block"
+                      [class]="statusClass(user.status)">
+                  {{ user.status === 'active' ? 'Actif' : 'Inactif' }}
+                </span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm mb-2">
+              <div>
+                <p class="text-[8px] sm:text-[9px] text-slate-400 font-semibold uppercase mb-1">Contact</p>
+                <p class="text-xs sm:text-sm text-slate-700">{{ user.phone || '—' }}</p>
+              </div>
+              <div>
+                <p class="text-[8px] sm:text-[9px] text-slate-400 font-semibold uppercase mb-1">Localisation</p>
+                <p class="text-xs sm:text-sm text-slate-700 truncate">{{ user.residence || 'Non spécifié' }}</p>
+                @if (user.batiment && user.lot) {
+                  <p class="text-[9px] sm:text-xs text-slate-400">{{ user.batiment }} • {{ user.lot }}</p>
+                }
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between mt-3 pt-2 border-t border-slate-100">
+              <div>
+                <p class="text-[8px] sm:text-[9px] text-slate-400 font-semibold uppercase">Création</p>
+                <p class="text-[10px] sm:text-xs text-slate-600">
+                  {{ formatDate(user.createdAt, 'shortDate') }} à {{ formatDate(user.createdAt, 'shortTime') }}
+                </p>
+              </div>
+              <div class="flex items-center gap-1">
+                <button
+                  class="px-2 py-1 rounded-lg text-[9px] sm:text-[10px] font-semibold
+                         transition-colors"
+                  type="button"
+                  [class.bg-amber-50]="user.status === 'active'"
+                  [class.text-amber-700]="user.status === 'active'"
+                  [class.hover:bg-amber-100]="user.status === 'active'"
+                  [class.bg-emerald-50]="user.status === 'inactive'"
+                  [class.text-emerald-700]="user.status === 'inactive'"
+                  [class.hover:bg-emerald-100]="user.status === 'inactive'"
+                  (click)="toggleStatus(user)">
+                  {{ user.status === 'active' ? 'Désactiver' : 'Activer' }}
+                </button>
+                <button
+                  class="px-2 py-1 rounded-lg bg-red-50 text-red-600
+                         hover:bg-red-100 text-[9px] sm:text-[10px] font-semibold
+                         transition-colors disabled:opacity-40"
+                  type="button"
+                  [disabled]="isCurrentUser(user)"
+                  (click)="deleteUser(user.id)">
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Version desktop : tableau -->
+  <div class="hidden lg:block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+
+    <div class="px-4 lg:px-6 py-3 lg:py-4 border-b border-slate-100 flex items-center justify-between">
+      <div>
+        <p class="text-[9px] lg:text-xs text-slate-500 font-semibold uppercase tracking-wider">Utilisateurs</p>
+        <h3 class="text-sm lg:text-base font-bold text-slate-900">{{ filteredUsers().length }} compte(s)</h3>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-100 bg-slate-50">
+            <th class="px-4 lg:px-6 py-2 lg:py-3 text-left text-[9px] lg:text-[11px] font-bold uppercase tracking-wider text-slate-500">Utilisateur</th>
+            <th class="px-4 lg:px-6 py-2 lg:py-3 text-left text-[9px] lg:text-[11px] font-bold uppercase tracking-wider text-slate-500">Rôle & Statut</th>
+            <th class="px-4 lg:px-6 py-2 lg:py-3 text-left text-[9px] lg:text-[11px] font-bold uppercase tracking-wider text-slate-500">Contact</th>
+            <th class="px-4 lg:px-6 py-2 lg:py-3 text-left text-[9px] lg:text-[11px] font-bold uppercase tracking-wider text-slate-500">Localisation</th>
+            <th class="px-4 lg:px-6 py-2 lg:py-3 text-left text-[9px] lg:text-[11px] font-bold uppercase tracking-wider text-slate-500">Création</th>
+            <th class="px-4 lg:px-6 py-2 lg:py-3 text-right text-[9px] lg:text-[11px] font-bold uppercase tracking-wider text-slate-500">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (filteredUsers().length === 0) {
+            <tr>
+              <td colspan="6" class="px-4 lg:px-6 py-16 lg:py-20 text-center">
+                <div class="flex flex-col items-center">
+                  <span class="text-3xl lg:text-4xl mb-2 lg:mb-3">😶</span>
+                  <p class="text-sm lg:text-base text-slate-700 font-semibold">Aucun utilisateur trouvé</p>
+                  <p class="text-slate-400 text-xs lg:text-sm mt-1">Modifiez vos filtres ou créez un compte.</p>
+                </div>
+              </td>
+            </tr>
+          } @else {
+            @for (user of filteredUsers(); track (user.firebaseUid ?? user.id)) {
+              <tr class="border-b border-slate-100 hover:bg-slate-50/70 transition-colors">
+
+                <!-- Utilisateur -->
+                <td class="px-4 lg:px-6 py-3 lg:py-4">
+                  <div class="flex items-center gap-2 lg:gap-3">
+                    <div class="w-7 h-7 lg:w-9 lg:h-9 bg-primary text-white rounded-full
+                                flex items-center justify-center font-bold text-xs lg:text-sm flex-shrink-0">
+                      {{ user.name.charAt(0).toUpperCase() }}
+                    </div>
+                    <div>
+                      <p class="font-semibold text-sm lg:text-base text-slate-900">{{ user.name }}</p>
+                      <p class="text-[9px] lg:text-xs text-slate-400 mt-0.5">{{ user.email }}</p>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Rôle & Statut -->
+                <td class="px-4 lg:px-6 py-3 lg:py-4">
+                  <div class="flex flex-wrap gap-1">
+                    @for (role of user.roles; track role) {
+                      <span class="text-[8px] lg:text-[10px] font-bold px-1.5 lg:px-2 py-0.5 rounded-full"
+                            [class]="roleClass(role)">
+                        {{ roleLabel(role) }}
+                      </span>
+                    }
+                    <span class="text-[8px] lg:text-[10px] font-bold px-1.5 lg:px-2 py-0.5 rounded-full"
+                          [class]="statusClass(user.status)">
+                      {{ user.status === 'active' ? 'Actif' : 'Inactif' }}
+                    </span>
+                  </div>
+                </td>
+
+                <!-- Contact -->
+                <td class="px-4 lg:px-6 py-3 lg:py-4">
+                  <p class="text-xs lg:text-sm text-slate-700">{{ user.phone || '—' }}</p>
+                  <p class="text-[8px] lg:text-xs text-slate-400 mt-0.5">Téléphone</p>
+                </td>
+
+                <!-- Localisation -->
+                <td class="px-4 lg:px-6 py-3 lg:py-4">
+                  <p class="text-xs lg:text-sm text-slate-700">{{ user.residence || 'Non spécifié' }}</p>
+                  @if (user.batiment && user.lot) {
+                    <p class="text-[8px] lg:text-xs text-slate-400 mt-0.5">{{ user.batiment }} • {{ user.lot }}</p>
+                  }
+                </td>
+
+                <!-- Création -->
+                <td class="px-4 lg:px-6 py-3 lg:py-4">
+                  <p class="text-xs lg:text-sm text-slate-700 tabular-nums">
+                    {{ formatDate(user.createdAt, 'shortDate') }}
+                  </p>
+                  <p class="text-[8px] lg:text-xs text-slate-400 mt-0.5">
+                    {{ formatDate(user.createdAt, 'shortTime') }}
+                  </p>
+                </td>
+
+                <!-- Actions -->
+                <td class="px-4 lg:px-6 py-3 lg:py-4">
+                  <div class="flex items-center justify-end gap-1 flex-wrap">
+                    <button
+                      class="w-6 h-6 lg:w-8 lg:h-8 rounded-lg hover:bg-slate-100 text-slate-400
+                             hover:text-slate-600 flex items-center justify-center
+                             transition-colors text-xs lg:text-base"
+                      type="button" aria-label="Détails"
+                      (click)="openDetail(user)">
+                      🔍
+                    </button>
+                    <button
+                      class="w-6 h-6 lg:w-8 lg:h-8 rounded-lg hover:bg-primary/10 text-slate-400
+                             hover:text-primary flex items-center justify-center
+                             transition-colors text-xs lg:text-base"
+                      type="button" aria-label="Modifier"
+                      (click)="openModal(user)">
+                      ✏️
+                    </button>
+                    <button
+                      class="px-1.5 lg:px-2.5 py-0.5 lg:py-1 rounded-lg text-[9px] lg:text-[11px] font-semibold
+                             transition-colors whitespace-nowrap"
+                      type="button"
+                      [class.bg-amber-50]="user.status === 'active'"
+                      [class.text-amber-700]="user.status === 'active'"
+                      [class.hover:bg-amber-100]="user.status === 'active'"
+                      [class.bg-emerald-50]="user.status === 'inactive'"
+                      [class.text-emerald-700]="user.status === 'inactive'"
+                      [class.hover:bg-emerald-100]="user.status === 'inactive'"
+                      (click)="toggleStatus(user)">
+                      {{ user.status === 'active' ? 'Désactiver' : 'Activer' }}
+                    </button>
+                    <button
+                      class="px-1.5 lg:px-2.5 py-0.5 lg:py-1 rounded-lg bg-red-50 text-red-600
+                             hover:bg-red-100 text-[9px] lg:text-[11px] font-semibold
+                             transition-colors disabled:opacity-40"
+                      type="button"
+                      [disabled]="isCurrentUser(user)"
+                      (click)="deleteUser(user.id)">
+                      Suppr.
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════════ DETAIL MODAL ══════════════ -->
+  @if (detailUser()) {
+    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50
+                flex items-center justify-center p-2 sm:p-4"
+         (click)="closeDetail()" role="presentation">
+
+      <div class="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh]
+                  overflow-y-auto flex flex-col m-2 sm:m-4"
+           role="dialog" aria-modal="true" aria-label="Détails utilisateur"
+           (click)="$event.stopPropagation()">
+
+        <div class="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-5 border-b border-slate-100 flex-shrink-0">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center font-bold text-lg">
+              {{ detailUser()!.name.charAt(0).toUpperCase() }}
+            </div>
+            <div>
+              <p class="text-[9px] sm:text-xs font-bold text-primary uppercase tracking-widest">Détails</p>
+              <h3 class="text-base sm:text-lg font-bold text-slate-900 mt-0.5">{{ detailUser()!.name }}</h3>
+            </div>
+          </div>
+          <button
+            class="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-slate-100 hover:bg-slate-200
+                   text-slate-500 font-bold text-base sm:text-lg flex items-center justify-center transition-colors"
+            type="button" aria-label="Fermer" (click)="closeDetail()">✕</button>
+        </div>
+
+        <div class="p-4 sm:p-6 flex flex-col gap-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <p class="text-[10px] text-slate-400 font-semibold uppercase">Email</p>
+              <p class="text-sm text-slate-700 break-all">{{ detailUser()!.email }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 font-semibold uppercase">Téléphone</p>
+              <p class="text-sm text-slate-700">{{ detailUser()!.phone || '—' }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 font-semibold uppercase">Statut</p>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full inline-block"
+                    [class]="statusClass(detailUser()!.status)">
+                {{ detailUser()!.status === 'active' ? 'Actif' : 'Inactif' }}
+              </span>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 font-semibold uppercase">Rôles</p>
+              <div class="flex flex-wrap gap-1 mt-0.5">
+                @for (role of detailUser()!.roles; track role) {
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full" [class]="roleClass(role)">
+                    {{ roleLabel(role) }}
+                  </span>
+                }
+              </div>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 font-semibold uppercase">Résidence</p>
+              <p class="text-sm text-slate-700">{{ detailUser()!.residence || '—' }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 font-semibold uppercase">Bâtiment</p>
+              <p class="text-sm text-slate-700">{{ detailUser()!.batiment || '—' }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 font-semibold uppercase">Lot / Appartement</p>
+              <p class="text-sm text-slate-700">{{ detailUser()!.lot || '—' }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 font-semibold uppercase">Étage</p>
+              <p class="text-sm text-slate-700">{{ detailUser()!.etage ?? '—' }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 font-semibold uppercase">Parking</p>
+              <p class="text-sm text-slate-700">{{ detailUser()!.hasParking ? '🅿️ Oui' : 'Non' }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 font-semibold uppercase">Ascenseur</p>
+              <p class="text-sm text-slate-700">{{ detailUser()!.hasAscenseur ? '🛗 Oui' : 'Non' }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 font-semibold uppercase">Création</p>
+              <p class="text-sm text-slate-700">{{ formatDate(detailUser()!.createdAt, 'shortDate') }}</p>
+            </div>
+            <div>
+              <p class="text-[10px] text-slate-400 font-semibold uppercase">Date d'emménagement</p>
+              <p class="text-sm text-slate-700">{{ detailUser()!.date_entree || '—' }}</p>
+            </div>
+          </div>
+
+          <div class="flex justify-end border-t border-slate-100 pt-4">
+            <button
+              class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600
+                     hover:bg-slate-50 font-semibold text-sm transition-colors"
+              type="button" (click)="closeDetail()">Fermer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ══════════════ MODAL ══════════════ -->
+  @if (isModalOpen()) {
+    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50
+                flex items-center justify-center p-2 sm:p-4"
+         (click)="closeModal()" role="presentation">
+
+      <div class="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh]
+                  overflow-y-auto flex flex-col m-2 sm:m-4"
+           role="dialog" aria-modal="true" aria-label="Utilisateur"
+           (click)="$event.stopPropagation()">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-5 border-b border-slate-100 flex-shrink-0">
+          <div>
+            <p class="text-[9px] sm:text-xs font-bold text-primary uppercase tracking-widest">Fiche utilisateur</p>
+            <h3 class="text-base sm:text-lg lg:text-xl font-bold text-slate-900 mt-0.5">
+              {{ editingId() ? 'Modifier l\'utilisateur' : 'Créer un utilisateur' }}
+            </h3>
+          </div>
+          <button
+            class="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-slate-100 hover:bg-slate-200
+                   text-slate-500 font-bold text-base sm:text-lg flex items-center justify-center
+                   transition-colors"
+            type="button" aria-label="Fermer" (click)="closeModal()">
+            ✕
+          </button>
+        </div>
+
+        <!-- Form -->
+        <form class="p-4 sm:p-6 flex flex-col gap-3 sm:gap-5" (ngSubmit)="saveUser()">
+
+          <!-- Nom + Email -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <label class="flex flex-col gap-1">
+              <span class="text-[9px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Nom complet *</span>
+              <input
+                class="rounded-lg sm:rounded-xl border border-slate-200 px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 text-xs sm:text-sm
+                       focus:outline-none focus:ring-1 sm:focus:ring-2 focus:ring-primary/30
+                       focus:border-primary transition-all"
+                name="nameInput"
+                [ngModel]="form().name"
+                (ngModelChange)="updateForm('name', $event)"
+                required />
+            </label>
+            <label class="flex flex-col gap-1">
+              <span class="text-[9px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Email *</span>
+              <input
+                class="rounded-lg sm:rounded-xl border border-slate-200 px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 text-xs sm:text-sm
+                       focus:outline-none focus:ring-1 sm:focus:ring-2 focus:ring-primary/30
+                       focus:border-primary transition-all"
+                type="email"
+                name="emailInput"
+                [ngModel]="form().email"
+                (ngModelChange)="updateForm('email', $event)"
+                required />
+            </label>
+          </div>
+
+          <!-- Résidence / Appartement / Étage -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+            <label class="flex flex-col gap-1">
+              <span class="text-[8px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Résidence</span>
+              <select
+                class="rounded-lg sm:rounded-xl border border-slate-200 px-2 sm:px-3.5 py-1.5 sm:py-2.5 text-xs sm:text-sm
+                       focus:outline-none focus:ring-1 sm:focus:ring-2 focus:ring-primary/30
+                       focus:border-primary transition-all bg-white cursor-pointer"
+                name="residenceSelect"
+                [ngModel]="form().residenceId"
+                (ngModelChange)="onResidenceChange($event)"
+                [disabled]="isResidenceAdmin">
+                <option [ngValue]="undefined">--</option>
+                @for (res of residencesOptions(); track (res.docId ?? res.id)) {
+                  <option [ngValue]="res.docId">{{ res.name }}</option>
+                }
+              </select>
+            </label>
+            <label class="flex flex-col gap-1">
+              <span class="text-[8px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Appartement</span>
+              <select
+                class="rounded-lg sm:rounded-xl border border-slate-200 px-2 sm:px-3.5 py-1.5 sm:py-2.5 text-xs sm:text-sm
+                       focus:outline-none focus:ring-1 sm:focus:ring-2 focus:ring-primary/30
+                       focus:border-primary transition-all bg-white cursor-pointer"
+                name="appartementSelect"
+                [ngModel]="form().appartementId"
+                (ngModelChange)="onAppartementChange($event)">
+                <option [ngValue]="undefined">--</option>
+                @for (apt of appartementsForSelection(); track (apt.docId ?? apt.numero)) {
+                  <option [ngValue]="apt.docId">{{ apt.numero }} — Étage {{ apt.etage }}</option>
+                }
+              </select>
+            </label>
+            <label class="flex flex-col gap-1">
+              <span class="text-[8px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Étage</span>
+              <select
+                class="rounded-lg sm:rounded-xl border border-slate-200 px-2 sm:px-3.5 py-1.5 sm:py-2.5 text-xs sm:text-sm
+                       focus:outline-none focus:ring-1 sm:focus:ring-2 focus:ring-primary/30
+                       focus:border-primary transition-all bg-white cursor-pointer"
+                name="etageSelect"
+                [ngModel]="form().etage"
+                (ngModelChange)="updateForm('etage', toNumber($event))">
+                <option [ngValue]="undefined">--</option>
+                @for (etage of etageOptions(); track etage) {
+                  <option [ngValue]="etage">{{ etage }}</option>
+                }
+              </select>
+            </label>
+          </div>
+
+          <!-- Rôles / Statut / Parking -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+
+            <!-- Rôles -->
+            <label class="flex flex-col gap-1 relative">
+              <span class="text-[8px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Rôles *</span>
+              <button
+                type="button"
+                class="flex items-center justify-between rounded-lg sm:rounded-xl border border-slate-200
+                       px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 text-xs sm:text-sm text-slate-700 bg-white
+                       hover:border-primary transition-all text-left"
+                (click)="showRoleDropdown.set(!showRoleDropdown())">
+                <span class="truncate">{{ roleSummary() }}</span>
+                <span class="ml-1 sm:ml-2 text-slate-400 text-xs">▾</span>
+              </button>
+              @if (showRoleDropdown()) {
+                <div class="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg sm:rounded-xl
+                            border border-slate-200 shadow-xl z-20 py-1 text-xs sm:text-sm">
+                  @for (role of roleOptions; track role) {
+                    <label class="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 py-1.5 sm:py-2
+                                  hover:bg-slate-50 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        class="w-3 h-3 sm:w-4 sm:h-4 rounded border-slate-300 accent-primary"
+                        [checked]="(form().roles || []).includes(role)"
+                        (change)="toggleRole(role, $event.target.checked)" />
+                      <span class="text-xs sm:text-sm text-slate-700">{{ roleLabel(role) }}</span>
+                    </label>
+                  }
+                </div>
+              }
+            </label>
+
+            <!-- Statut -->
+            <label class="flex flex-col gap-1">
+              <span class="text-[8px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Statut *</span>
+              <select
+                class="rounded-lg sm:rounded-xl border border-slate-200 px-2 sm:px-3.5 py-1.5 sm:py-2.5 text-xs sm:text-sm
+                       focus:outline-none focus:ring-1 sm:focus:ring-2 focus:ring-primary/30
+                       focus:border-primary transition-all bg-white cursor-pointer"
+                name="statusSelect"
+                [ngModel]="form().status"
+                (ngModelChange)="setStatus($event)">
+                <option value="active">Actif</option>
+                <option value="inactive">Inactif</option>
+              </select>
+            </label>
+
+            <!-- Parking -->
+            <div class="flex flex-col justify-end pb-1">
+              <button type="button"
+                class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border transition-all w-full"
+                [class.border-blue-400]="form().hasParking"
+                [class.bg-blue-50]="form().hasParking"
+                [class.border-slate-200]="!form().hasParking"
+                [class.bg-white]="!form().hasParking"
+                (click)="updateForm('hasParking', !form().hasParking)">
+                <span class="relative flex items-center w-9 h-5 sm:w-10 sm:h-[22px] rounded-full transition-colors"
+                      [class.bg-blue-500]="form().hasParking" [class.bg-slate-300]="!form().hasParking">
+                  <span class="absolute w-3.5 h-3.5 sm:w-4 sm:h-4 bg-white rounded-full shadow transition-transform"
+                        [class.translate-x-[18px]]="form().hasParking"
+                        [class.sm:translate-x-[20px]]="form().hasParking"
+                        [class.translate-x-[2px]]="!form().hasParking"></span>
+                </span>
+                <div class="text-left">
+                  <p class="text-xs sm:text-sm font-semibold"
+                     [class.text-blue-700]="form().hasParking" [class.text-slate-500]="!form().hasParking">
+                    🅿️ {{ form().hasParking ? 'Avec parking' : 'Sans parking' }}
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Ascenseur -->
+          <div class="grid grid-cols-1 gap-3 sm:gap-4">
+            <div class="flex flex-col justify-end pb-1">
+              <button type="button"
+                class="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border transition-all w-full"
+                [class.border-indigo-400]="form().hasAscenseur"
+                [class.bg-indigo-50]="form().hasAscenseur"
+                [class.border-slate-200]="!form().hasAscenseur"
+                [class.bg-white]="!form().hasAscenseur"
+                (click)="toggleAscenseur()">
+                <span class="relative flex items-center w-9 h-5 sm:w-10 sm:h-[22px] rounded-full transition-colors"
+                      [class.bg-indigo-500]="form().hasAscenseur" [class.bg-slate-300]="!form().hasAscenseur">
+                  <span class="absolute w-3.5 h-3.5 sm:w-4 sm:h-4 bg-white rounded-full shadow transition-transform"
+                        [class.translate-x-[18px]]="form().hasAscenseur"
+                        [class.sm:translate-x-[20px]]="form().hasAscenseur"
+                        [class.translate-x-[2px]]="!form().hasAscenseur"></span>
+                </span>
+                <div class="text-left">
+                  <p class="text-xs sm:text-sm font-semibold"
+                     [class.text-indigo-700]="form().hasAscenseur" [class.text-slate-500]="!form().hasAscenseur">
+                    🛗 {{ form().hasAscenseur ? 'Avec ascenseur' : 'Sans ascenseur' }}
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Avertissement ascenseur -->
+          @if (ascenseurWarning()) {
+          <div class="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800">
+            <span class="text-base mt-0.5">⚠️</span>
+            <p class="text-xs sm:text-sm">{{ ascenseurWarning() }}</p>
+          </div>
+          }
+
+          <!-- Sélection de résidence UNIQUEMENT pour ADMIN_RESIDENCE -->
+          @if (showResidenceSelection()) {
+          <div class="border-t border-slate-100 pt-3 mt-2">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
+              Résidence assignée *
+            </p>
+            
+            <div class="grid grid-cols-1 gap-3">
+              <label class="flex flex-col gap-1">
+                <span class="text-[8px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  Sélectionner la résidence
+                </span>
+                <select
+                  class="rounded-lg sm:rounded-xl border border-slate-200 px-2 sm:px-3.5 py-1.5 sm:py-2.5 text-xs sm:text-sm
+                         focus:outline-none focus:ring-1 sm:focus:ring-2 focus:ring-primary/30
+                         focus:border-primary transition-all bg-white cursor-pointer"
+                  name="residenceAssignmentSelect"
+                  [ngModel]="form().residenceId"
+                  (ngModelChange)="updateForm('residenceId', $event)"
+                  [disabled]="isResidenceAdmin">
+                  <option [ngValue]="undefined">-- Sélectionner une résidence --</option>
+                  @for (res of residencesOptions(); track res.docId) {
+                    <option [ngValue]="res.docId">{{ res.name }}</option>
+                  }
+                </select>
+                @if (!form().residenceId) {
+                  <p class="text-amber-600 text-[10px] mt-1">⚠️ Requis pour un admin de résidence</p>
+                }
+              </label>
+            </div>
+          </div>
+          }
+
+          <!-- Téléphone + Date d'emménagement -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <label class="flex flex-col gap-1">
+              <span class="text-[8px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Téléphone</span>
+              <input
+                class="rounded-lg sm:rounded-xl border border-slate-200 px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 text-xs sm:text-sm
+                       focus:outline-none focus:ring-1 sm:focus:ring-2 focus:ring-primary/30
+                       focus:border-primary transition-all"
+                name="phoneInput"
+                [ngModel]="form().phone"
+                (ngModelChange)="updateForm('phone', $event)" />
+            </label>
+
+            <label class="flex flex-col gap-1">
+              <span class="text-[8px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Date d'emménagement *</span>
+              <input
+                type="date"
+                class="rounded-lg sm:rounded-xl border border-slate-200 px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 text-xs sm:text-sm
+                       focus:outline-none focus:ring-1 sm:focus:ring-2 focus:ring-primary/30
+                       focus:border-primary transition-all"
+                name="dateEntreeInput"
+                [ngModel]="form().date_entree"
+                (ngModelChange)="updateForm('date_entree', $event)"
+                required />
+            </label>
+          </div>
+
+          <!-- Mot de passe -->
+          <div class="flex flex-col gap-1">
+            <span class="text-[8px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Mot de passe</span>
+            <div class="flex items-center gap-1 rounded-lg sm:rounded-xl border border-slate-200
+                        px-2 sm:px-3.5 py-1 focus-within:ring-2 focus-within:ring-primary/30
+                        focus-within:border-primary transition-all bg-white">
+              <input
+                class="flex-1 text-xs sm:text-sm py-1 sm:py-1.5 bg-transparent outline-none
+                       border-none focus:ring-0"
+                [type]="form().passwordVisible ? 'text' : 'password'"
+                name="passwordInput"
+                [ngModel]="form().password"
+                (ngModelChange)="updateForm('password', $event)"
+                [placeholder]="form().autoPassword ? 'Généré auto.' : ''"
+                [readonly]="form().autoPassword" />
+              <button
+                type="button"
+                class="text-slate-400 hover:text-slate-600 transition-colors px-0.5 sm:px-1 text-xs"
+                (click)="updateForm('passwordVisible', !form().passwordVisible)">
+                {{ form().passwordVisible ? '🙈' : '👁️' }}
+              </button>
+              <button
+                type="button"
+                class="text-[10px] sm:text-xs text-primary hover:text-primary/80 font-semibold
+                       px-1 sm:px-2 py-0.5 sm:py-1 rounded-lg hover:bg-primary/10 transition-colors whitespace-nowrap"
+                (click)="generatePassword()">
+                Générer
+              </button>
+            </div>
+            <label class="flex items-center gap-1.5 sm:gap-2 cursor-pointer select-none mt-0.5">
+              <input
+                type="checkbox"
+                class="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded border-slate-300 accent-primary"
+                name="autoPasswordCheckbox"
+                [ngModel]="form().autoPassword"
+                (ngModelChange)="updateForm('autoPassword', $event)" />
+              <span class="text-[9px] sm:text-xs text-slate-500">Générer auto.</span>
+            </label>
+          </div>
+
+          <!-- Footer -->
+          <div class="flex items-center justify-end gap-2 sm:gap-3 border-t border-slate-100 pt-3 sm:pt-5">
+            <button
+              class="px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl border border-slate-200 text-slate-600
+                     hover:bg-slate-50 font-semibold text-xs sm:text-sm transition-colors"
+              type="button" (click)="closeModal()">
+              Annuler
+            </button>
+            <button
+              class="px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl bg-primary hover:bg-primary/90
+                     text-white font-semibold text-xs sm:text-sm shadow-sm
+                     transition-all active:scale-95"
+              type="submit">
+              {{ editingId() ? 'Enregistrer' : 'Créer' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>

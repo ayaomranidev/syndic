@@ -1,0 +1,553 @@
+<div class="dettes-page min-h-screen bg-slate-50 px-4 lg:px-10 py-8">
+
+  <!-- ══════════════════════ HEADER ══════════════════════ -->
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+    <div>
+      <p class="text-xs font-semibold text-primary uppercase tracking-widest mb-1">Gestion financière</p>
+      <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Vue globale des dettes et arriérés</h1>
+      <p class="text-slate-500 mt-1">Suivi financier consolidé par copropriétaire — toutes charges confondues</p>
+    </div>
+    <div class="flex gap-3 flex-wrap">
+      <button class="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-lg font-semibold text-sm hover:bg-slate-50 transition-colors shadow-sm"
+        (click)="resetFilters()">
+        ↺ Réinitialiser
+      </button>
+      <button class="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-lg font-semibold text-sm hover:bg-slate-50 transition-colors shadow-sm"
+        routerLink="/dettes/par-annee">
+        📅 Par année
+      </button>
+      <button class="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-lg font-bold text-sm hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all"
+        routerLink="/generation-dettes">
+        ⚡ Générer dettes du mois
+      </button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ KPI CARDS ══════════════════════ -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+
+    <div class="flex flex-col gap-2 rounded-xl p-6 bg-white border border-slate-200 shadow-sm">
+      <div class="flex items-center justify-between">
+        <p class="text-slate-500 text-sm font-medium">Arriérés {{ anneeCourante - 1 }}</p>
+        <span class="text-2xl">📋</span>
+      </div>
+      <p class="text-slate-900 text-2xl font-bold tabular-nums">{{ formatMontant(kpiArrieresAnneePrec()) }}</p>
+      <p class="text-slate-400 text-xs mt-1">Exercice précédent non soldé</p>
+    </div>
+
+    <div class="flex flex-col gap-2 rounded-xl p-6 bg-white border border-slate-200 shadow-sm">
+      <div class="flex items-center justify-between">
+        <p class="text-slate-500 text-sm font-medium">Courant {{ anneeCourante }}</p>
+        <span class="text-2xl">📅</span>
+      </div>
+      <p class="text-slate-900 text-2xl font-bold tabular-nums">{{ formatMontant(kpiCourantAnneeCourante()) }}</p>
+      <p class="text-slate-400 text-xs mt-1">Exercice en cours</p>
+    </div>
+
+    <div class="flex flex-col gap-2 rounded-xl p-6 bg-white border border-l-4 border-slate-200 border-l-red-500 shadow-sm">
+      <div class="flex items-center justify-between">
+        <p class="text-slate-500 text-sm font-medium">Total Dettes</p>
+        <span class="text-2xl">⚠️</span>
+      </div>
+      <p class="text-red-600 text-2xl font-bold tabular-nums">{{ formatMontant(kpiTotalDu()) }}</p>
+      <p class="text-slate-400 text-xs mt-1">Cumulé tous exercices</p>
+    </div>
+
+    <div class="flex flex-col gap-2 rounded-xl p-6 bg-white border border-slate-200 shadow-sm">
+      <div class="flex items-center justify-between">
+        <p class="text-slate-500 text-sm font-medium">Taux recouvrement</p>
+        <span class="text-2xl">📊</span>
+      </div>
+      <p class="text-slate-900 text-2xl font-bold tabular-nums">{{ kpiTauxRecouvrement() }}%</p>
+      <div class="w-full bg-slate-100 rounded-full h-1.5 mt-2">
+        <div class="bg-primary h-1.5 rounded-full transition-all" [style.width.%]="kpiTauxRecouvrement()"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════ FILTRES ══════════════════════ -->
+  <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 mb-6 flex flex-col md:flex-row gap-3">
+    <div class="flex flex-1 items-center gap-2 border border-slate-200 rounded-lg px-3 bg-slate-50 min-w-48">
+      <span class="text-slate-400">🔍</span>
+      <input type="text" placeholder="Rechercher un copropriétaire ou appartement..."
+        class="flex-1 bg-transparent py-2 text-sm outline-none text-slate-900"
+        [value]="searchTerm()" (input)="onSearch($event)" />
+      @if (searchTerm()) {
+        <button (click)="clearSearch()" class="text-slate-400 hover:text-slate-600 text-xs">✕</button>
+      }
+    </div>
+    <select class="border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-white"
+      [ngModel]="selectedAnnee()" (ngModelChange)="setAnneeFilter($event)">
+      <option value="toutes">Toutes les années</option>
+      @for (annee of anneesDisponibles(); track annee) {
+        <option [value]="annee">{{ annee }}</option>
+      }
+    </select>
+    <select class="border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 bg-white"
+      [ngModel]="selectedCoproprietaire()" (ngModelChange)="setCoproprietaireFilter($event)">
+      <option value="tous">Tous les copropriétaires</option>
+      @for (u of users(); track u.firebaseUid || u.id) {
+        <option [value]="u.firebaseUid || u.id">{{ u.name || u.fullname || u.email }}</option>
+      }
+    </select>
+  </div>
+
+  <!-- ══════════════════════ ONGLETS ══════════════════════ -->
+  <div class="flex border-b border-slate-200 gap-6 mb-6 overflow-x-auto whitespace-nowrap">
+    <button (click)="setTab('toutes')"
+      class="pb-3 px-1 text-sm font-bold border-b-2 transition-all"
+      [class.border-primary]="selectedTab() === 'toutes'"
+      [class.text-primary]="selectedTab() === 'toutes'"
+      [class.border-transparent]="selectedTab() !== 'toutes'"
+      [class.text-slate-500]="selectedTab() !== 'toutes'">
+      📋 Tous ({{ vuesCoproprietaires().length }})
+    </button>
+    <button (click)="setTab('impayees')"
+      class="pb-3 px-1 text-sm font-bold border-b-2 transition-all"
+      [class.border-primary]="selectedTab() === 'impayees'"
+      [class.text-primary]="selectedTab() === 'impayees'"
+      [class.border-transparent]="selectedTab() !== 'impayees'"
+      [class.text-slate-500]="selectedTab() !== 'impayees'">
+      🔴 Impayés ({{ dettesImpayeesCount() }})
+    </button>
+    <button (click)="setTab('partielles')"
+      class="pb-3 px-1 text-sm font-bold border-b-2 transition-all"
+      [class.border-primary]="selectedTab() === 'partielles'"
+      [class.text-primary]="selectedTab() === 'partielles'"
+      [class.border-transparent]="selectedTab() !== 'partielles'"
+      [class.text-slate-500]="selectedTab() !== 'partielles'">
+      🟡 Partiels ({{ dettesPartiellesCount() }})
+    </button>
+    <button (click)="setTab('payees')"
+      class="pb-3 px-1 text-sm font-bold border-b-2 transition-all"
+      [class.border-primary]="selectedTab() === 'payees'"
+      [class.text-primary]="selectedTab() === 'payees'"
+      [class.border-transparent]="selectedTab() !== 'payees'"
+      [class.text-slate-500]="selectedTab() !== 'payees'">
+      ✅ À jour ({{ dettesPayeesCount() }})
+    </button>
+  </div>
+
+  <!-- ══════════════════════ TABLEAU ══════════════════════ -->
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+
+    @if (loading()) {
+      <div class="flex items-center justify-center py-20 gap-3 text-slate-400">
+        <div class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <span class="text-sm">Chargement des données...</span>
+      </div>
+
+    } @else if (filteredVues().length === 0) {
+      <div class="flex flex-col items-center justify-center py-20 gap-2 text-slate-400">
+        <span class="text-4xl">✅</span>
+        <p class="font-semibold">Aucune dette trouvée</p>
+        <p class="text-sm">Essayez de modifier vos filtres</p>
+        <button (click)="resetFilters()" class="mt-2 px-4 py-2 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors text-slate-600">
+          Réinitialiser les filtres
+        </button>
+      </div>
+
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200">
+              <th class="px-6 py-4 text-slate-700 text-xs font-bold uppercase tracking-wider">Copropriétaire</th>
+              <th class="px-6 py-4 text-slate-700 text-xs font-bold uppercase tracking-wider">Appartement</th>
+              <th class="px-6 py-4 text-slate-700 text-xs font-bold uppercase tracking-wider text-right">Arriérés {{ anneeCourante - 1 }}</th>
+              <th class="px-6 py-4 text-slate-700 text-xs font-bold uppercase tracking-wider text-right">Courant {{ anneeCourante }}</th>
+              <th class="px-6 py-4 text-slate-700 text-xs font-bold uppercase tracking-wider text-right">Total Dû</th>
+              <th class="px-6 py-4 text-slate-700 text-xs font-bold uppercase tracking-wider text-center">Statut</th>
+              <th class="px-6 py-4 text-slate-700 text-xs font-bold uppercase tracking-wider text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            @for (vue of pagedVues(); track vue.coproprietaireId + vue.appartementId) {
+              <tr class="hover:bg-slate-50/70 transition-colors"
+                [class.bg-red-50]="isHighArrears(vue) && !isCritical(vue)"
+                [class.bg-red-100]="isCritical(vue)">
+
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="size-9 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0"
+                      [class.bg-red-100]="vue.statut === 'IMPAYEE'"
+                      [class.text-red-700]="vue.statut === 'IMPAYEE'"
+                      [class.bg-amber-100]="vue.statut === 'PARTIELLEMENT_PAYEE'"
+                      [class.text-amber-700]="vue.statut === 'PARTIELLEMENT_PAYEE'"
+                      [class.bg-slate-100]="vue.statut === 'PAYEE'"
+                      [class.text-slate-600]="vue.statut === 'PAYEE'">
+                      {{ getVueCoproInitiales(vue) }}
+                    </div>
+                    <div>
+                      <p class="font-semibold text-sm text-slate-900">{{ getVueCoproNom(vue) }}</p>
+                      @if (getVueCoproEmail(vue)) {
+                        <p class="text-xs text-slate-400">{{ getVueCoproEmail(vue) }}</p>
+                      }
+                    </div>
+                  </div>
+                </td>
+
+                <td class="px-6 py-4 text-sm text-slate-500 font-medium">
+                  {{ getAppartementLabel(vue.appartementId) }}
+                  @if (getAppartement(vue.appartementId)?.batimentName) {
+                    <div class="text-xs text-slate-400">{{ getAppartement(vue.appartementId)?.batimentName }}</div>
+                  }
+                </td>
+
+                <td class="px-6 py-4 text-right tabular-nums">
+                  @if (vue.arrieresAnneePrec > 0) {
+                    <span class="text-sm font-semibold text-red-600">{{ formatMontant(vue.arrieresAnneePrec) }}</span>
+                  } @else {
+                    <span class="text-sm text-slate-400 italic">0 DT</span>
+                  }
+                </td>
+
+                <td class="px-6 py-4 text-right tabular-nums">
+                  @if (vue.courantAnneeCourante > 0) {
+                    <span class="text-sm font-semibold text-red-600">{{ formatMontant(vue.courantAnneeCourante) }}</span>
+                  } @else {
+                    <span class="text-sm text-slate-400 italic">0 DT</span>
+                  }
+                </td>
+
+                <td class="px-6 py-4 text-right tabular-nums">
+                  @if (vue.totalDu > 0) {
+                    <span class="text-sm font-black text-red-700">{{ formatMontant(vue.totalDu) }}</span>
+                  } @else {
+                    <span class="text-sm font-bold text-slate-400 italic">0 DT</span>
+                  }
+                </td>
+
+                <td class="px-6 py-4 text-center">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold"
+                    [class]="getStatusClasses(vue.statut)">
+                    {{ getStatusLabel(vue.statut) }}
+                  </span>
+                </td>
+
+                <td class="px-6 py-4 text-center">
+                  <div class="flex items-center justify-center gap-2">
+                    <button (click)="ouvrirDetailVue(vue)"
+                      class="text-primary hover:underline text-sm font-bold whitespace-nowrap">
+                      Détails
+                    </button>
+                    @if (vue.statut !== 'PAYEE') {
+                      <span class="text-slate-200">|</span>
+                      <button (click)="openRelanceVue(vue)"
+                        class="text-amber-600 hover:underline text-sm font-bold whitespace-nowrap">
+                        Relancer
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="bg-slate-50 border-t-2 border-slate-200">
+              <td class="px-6 py-4 font-bold text-sm text-slate-700" colspan="2">
+                TOTAL — page {{ pageCurrent() }}/{{ totalPages() }}
+              </td>
+              <td class="px-6 py-4 text-sm font-bold tabular-nums text-right text-red-600">
+                {{ formatMontant(pageTotalArrieresPrec()) }}
+              </td>
+              <td class="px-6 py-4 text-sm font-bold tabular-nums text-right text-red-600">
+                {{ formatMontant(pageTotalCourant()) }}
+              </td>
+              <td class="px-6 py-4 text-sm font-black tabular-nums text-right text-red-700">
+                {{ formatMontant(pageTotalDu()) }}
+              </td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- ══════════════════════ PAGINATION ══════════════════════ -->
+      <div class="px-6 py-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p class="text-sm text-slate-500">
+          Affichage de
+          <span class="font-bold text-slate-700">{{ firstIndexOnPage() }}</span>
+          à
+          <span class="font-bold text-slate-700">{{ lastIndexOnPage() }}</span>
+          sur
+          <span class="font-bold text-slate-700">{{ filteredVues().length }}</span>
+          copropriétaires
+        </p>
+        <div class="flex gap-1.5 items-center">
+          <button (click)="prevPage()" [disabled]="pageCurrent() === 1"
+            class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            ← Précédent
+          </button>
+
+          @for (p of pageNumbers(); track p) {
+            <button (click)="goToPage(p)"
+              class="px-3 py-1.5 rounded-lg text-sm font-bold transition-colors"
+              [class.bg-primary]="p === pageCurrent()"
+              [class.text-white]="p === pageCurrent()"
+              [class.border]="p !== pageCurrent()"
+              [class.border-slate-200]="p !== pageCurrent()"
+              [class.text-slate-600]="p !== pageCurrent()"
+              [class.hover:bg-slate-50]="p !== pageCurrent()">
+              {{ p }}
+            </button>
+          }
+
+          <button (click)="nextPage()" [disabled]="pageCurrent() === totalPages()"
+            class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            Suivant →
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- ══════════════════════ NOTE ADMIN ══════════════════════ -->
+  <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+    <div class="bg-primary/5 p-5 rounded-xl border border-primary/10">
+      <h4 class="font-bold text-slate-900 mb-2 flex items-center gap-2">
+        ℹ️ Note administrative
+      </h4>
+      <p class="text-slate-600 leading-relaxed">
+        Chaque ligne représente le <strong>total consolidé</strong> de toutes les charges d'un copropriétaire (gardien + gaz + travaux…).
+        Cliquez sur <strong>Détails</strong> pour voir le détail mois par mois et charge par charge.
+      </p>
+    </div>
+    <div class="flex flex-col gap-3">
+      <div class="flex items-start gap-3">
+        <div class="size-3 mt-1 rounded-full bg-red-100 border border-red-400 flex-shrink-0"></div>
+        <div>
+          <p class="font-bold text-slate-800">Surbrillance rouge</p>
+          <p class="text-slate-500">Arriéré de l'exercice précédent ({{ anneeCourante - 1 }}) — relance prioritaire recommandée.</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3">
+        <div class="size-3 mt-1 rounded-full bg-primary/20 border border-primary flex-shrink-0"></div>
+        <div>
+          <p class="font-bold text-slate-800">Génération mensuelle</p>
+          <p class="text-slate-500">Le bouton "Générer dettes du mois" crée automatiquement les dettes pour toutes les charges actives.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════ MODAL DÉTAIL VUE COPROPRIETAIRE ══════════════════════ -->
+@if (showGroupeModal() && selectedVue()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+    (click)="closeModals()">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col"
+      (click)="$event.stopPropagation()">
+
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">
+            Détail des dettes — {{ getVueCoproNom(selectedVue()!) }}
+          </h2>
+          <p class="text-sm text-slate-500">{{ getAppartementLabel(selectedVue()!.appartementId) }}</p>
+        </div>
+        <button (click)="closeModals()" class="size-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition-colors">✕</button>
+      </div>
+
+      <div class="overflow-y-auto flex-1 p-6">
+        <!-- Résumé KPIs -->
+        <div class="grid grid-cols-3 gap-4 mb-6">
+          <div class="bg-slate-50 rounded-xl p-4 text-center">
+            <p class="text-xs text-slate-500 mb-1">Arriérés {{ anneeCourante - 1 }}</p>
+            <p class="font-black text-red-600 text-lg tabular-nums">{{ formatMontant(selectedVue()!.arrieresAnneePrec) }}</p>
+          </div>
+          <div class="bg-slate-50 rounded-xl p-4 text-center">
+            <p class="text-xs text-slate-500 mb-1">Courant {{ anneeCourante }}</p>
+            <p class="font-black text-red-600 text-lg tabular-nums">{{ formatMontant(selectedVue()!.courantAnneeCourante) }}</p>
+          </div>
+          <div class="bg-red-50 border border-red-100 rounded-xl p-4 text-center">
+            <p class="text-xs text-slate-500 mb-1">Total Dû</p>
+            <p class="font-black text-red-700 text-lg tabular-nums">{{ formatMontant(selectedVue()!.totalDu) }}</p>
+          </div>
+        </div>
+
+        <!-- Détail par mois et charges -->
+        @for (groupe of selectedVue()!.groupes; track groupe.id) {
+          <div class="mb-4 border border-slate-200 rounded-xl overflow-hidden">
+            <div class="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200">
+              <span class="font-bold text-sm text-slate-800">{{ formatPeriode(groupe.annee, groupe.mois) }}</span>
+              <div class="flex items-center gap-3">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold"
+                  [class]="getStatusClasses(groupe.statut)">
+                  {{ getStatusLabel(groupe.statut) }}
+                </span>
+                <span class="font-black text-sm tabular-nums"
+                  [class.text-red-600]="groupe.montant_restant_total > 0"
+                  [class.text-emerald-600]="groupe.montant_restant_total === 0">
+                  {{ formatMontant(groupe.montant_restant_total) }} restant
+                </span>
+              </div>
+            </div>
+            <table class="w-full text-sm">
+              <tbody class="divide-y divide-slate-100">
+                @for (d of groupe.dettesDetail; track d.id) {
+                  <tr class="hover:bg-slate-50/50">
+                    <td class="px-4 py-2.5 text-slate-700">{{ getChargeLabel(d.chargeId) }}</td>
+                    <td class="px-4 py-2.5 text-right tabular-nums text-slate-500">Dû: {{ formatMontant(d.montant_original) }}</td>
+                    <td class="px-4 py-2.5 text-right tabular-nums text-emerald-600">Payé: {{ formatMontant(d.montant_paye) }}</td>
+                    <td class="px-4 py-2.5 text-right tabular-nums font-bold"
+                      [class.text-red-600]="d.montant_restant > 0"
+                      [class.text-slate-400]="d.montant_restant === 0">
+                      Reste: {{ formatMontant(d.montant_restant) }}
+                    </td>
+                    <td class="px-4 py-2.5 text-center">
+                      @if (d.statut !== 'PAYEE') {
+                        <button (click)="openEdit(d)"
+                          class="text-xs font-bold text-primary hover:underline">
+                          Payer
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+              <tfoot>
+                <tr class="bg-slate-50 border-t border-slate-200">
+                  <td class="px-4 py-2.5 font-bold text-slate-700">Total {{ formatPeriode(groupe.annee, groupe.mois) }}</td>
+                  <td class="px-4 py-2.5 text-right font-bold tabular-nums">{{ formatMontant(groupe.montant_original_total) }}</td>
+                  <td class="px-4 py-2.5 text-right font-bold tabular-nums text-emerald-600">{{ formatMontant(groupe.montant_paye_total) }}</td>
+                  <td class="px-4 py-2.5 text-right font-bold tabular-nums text-red-600">{{ formatMontant(groupe.montant_restant_total) }}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        }
+      </div>
+
+      <div class="px-6 py-4 border-t border-slate-200 flex justify-between items-center">
+        <button (click)="closeModals()"
+          class="px-4 py-2 border border-slate-200 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+          Fermer
+        </button>
+        @if (selectedVue()!.totalDu > 0) {
+          <button (click)="marquerVuePayee(selectedVue()!)"
+            class="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-emerald-700 transition-colors">
+            ✅ Tout marquer comme payé ({{ formatMontant(selectedVue()!.totalDu) }})
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ══════════════════════ MODAL PAIEMENT ══════════════════════ -->
+@if (showEditModal() && editingDette()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+    (click)="closeModals()">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md"
+      (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900">Enregistrer un paiement</h2>
+        <button (click)="closeModals()" class="size-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500">✕</button>
+      </div>
+      <form [formGroup]="editForm" (ngSubmit)="savePayment()" class="p-6">
+        @let dette = editingDette()!;
+        <div class="bg-slate-50 rounded-xl p-4 mb-5 space-y-1 text-sm">
+          <p><span class="text-slate-500">Charge :</span> <strong>{{ getChargeLabel(dette.chargeId) }}</strong></p>
+          <p><span class="text-slate-500">Période :</span> <strong>{{ formatPeriode(dette.annee, dette.mois) }}</strong></p>
+          <p><span class="text-slate-500">Restant dû :</span> <strong class="text-red-600">{{ formatMontant(dette.montant_restant) }}</strong></p>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Montant payé (DT) *</label>
+            <input type="number" formControlName="montant_paye" [max]="dette.montant_restant" min="0" step="0.01"
+              class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1.5">Date *</label>
+              <input type="date" formControlName="date_paiement"
+                class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-slate-700 mb-1.5">Mode *</label>
+              <select formControlName="mode_paiement"
+                class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary">
+                <option value="especes">Espèces</option>
+                <option value="cheque">Chèque</option>
+                <option value="virement">Virement</option>
+                <option value="carte">Carte</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Référence</label>
+            <input type="text" formControlName="reference"
+              class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-slate-700 mb-1.5">Notes</label>
+            <textarea formControlName="notes" rows="3"
+              class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"></textarea>
+          </div>
+        </div>
+        <!-- Dans le modal de paiement, modifier le bouton submit -->
+<div class="flex justify-between mt-6 pt-4 border-t border-slate-100">
+  <button type="button" (click)="closeModals()"
+    class="px-4 py-2 border border-slate-200 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+    Annuler
+  </button>
+  <button type="submit" [disabled]="!editForm.valid || saving()"
+    class="px-6 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors min-w-[120px]">
+    @if (saving()) {
+      <span class="flex items-center justify-center gap-2">
+        <span class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+        ...
+      </span>
+    } @else {
+      Enregistrer
+    }
+  </button>
+</div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- ══════════════════════ MODAL RELANCE ══════════════════════ -->
+@if (showRelanceModal()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+    (click)="closeModals()">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl"
+      (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900">Envoyer une relance</h2>
+        <button (click)="closeModals()" class="size-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500">✕</button>
+      </div>
+      <form [formGroup]="relanceForm" (ngSubmit)="sendRelance()" class="p-6">
+        <div class="flex gap-4 mb-4">
+          <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" formControlName="envoyer_email" class="rounded" />
+            <span>Email</span>
+          </label>
+          <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" formControlName="envoyer_sms" class="rounded" />
+            <span>SMS</span>
+          </label>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">Message *</label>
+          <textarea formControlName="message" rows="8"
+            class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"></textarea>
+        </div>
+        <div class="flex justify-between mt-6 pt-4 border-t border-slate-100">
+          <button type="button" (click)="closeModals()"
+            class="px-4 py-2 border border-slate-200 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+            Annuler
+          </button>
+          <button type="submit" [disabled]="!relanceForm.valid"
+            class="px-6 py-2 bg-amber-500 text-white rounded-lg text-sm font-bold hover:bg-amber-600 disabled:opacity-40 transition-colors">
+            ✉️ Envoyer la relance
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

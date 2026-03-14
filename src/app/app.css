@@ -1,0 +1,120 @@
+:root{--sidebar-width:260px}
+app-navbar{position:fixed;top:0;left:0;right:0;z-index:60}
+.spacer{height:64px}
+.app-main{padding:20px;margin-left:var(--sidebar-width);min-height:calc(100vh - 64px);background:linear-gradient(180deg,#f6f7f9,#f3f4f6)}
+
+@media(max-width:900px){.app-main{margin-left:0}}
+
+/* when sidebar is hidden (e.g., auth pages) remove left margin */
+.app-main.no-sidebar{margin-left:0}
+
+/* app.component.css */
+:host {
+	display: block;
+	min-height: 100vh;
+	position: relative;
+}
+
+.app-container {
+	min-height: 100vh;
+	position: relative;
+}
+
+/* Assurer que le contenu est visible */
+.main-content-wrapper {
+	position: relative;
+	z-index: 10;
+}
+
+/* src/app/app.component.css */
+:host {
+	display: block;
+	min-height: 100vh;
+}
+
+.app-container {
+	display: flex;
+	flex-direction: column;
+	min-height: 100vh;
+}
+
+.main-content-wrapper {
+	flex: 1;
+	position: relative;
+	z-index: 10;
+}
+
+/* Debug - pour voir les bordures */
+.debug * {
+	outline: 1px solid rgba(255, 0, 0, 0.1);
+}
+
+/* Unified theme variables and payment styles */
+:root{
+	--brand-primary:#0f62fe;
+	--brand-accent:#00bfa5;
+	--muted:#6b6b6b;
+	--surface:#f7f8fb;
+	--card-border:rgba(15,23,42,0.06);
+}
+
+.btn-primary{background:var(--brand-primary);color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer}
+.ghost{background:transparent;border:1px solid var(--card-border);padding:6px 10px;border-radius:8px}
+
+.payment-card{background:linear-gradient(90deg,#fff,#fbfdff);border:1px solid rgba(15,98,254,0.06);border-radius:10px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.payment-left{display:flex;align-items:center;gap:12px}
+.payment-amount{font-weight:800;color:var(--brand-primary);font-size:1.05rem}
+.payment-meta{color:var(--muted);font-size:13px}
+.payment-status{padding:6px 10px;border-radius:999px;font-weight:700;font-size:12px}
+.payment-status.paid{background:rgba(22,163,74,0.12);color:#166534}
+.payment-status.pending{background:rgba(245,158,11,0.12);color:#92400e}
+.payment-status.failed{background:rgba(220,38,38,0.12);color:#991b1b}
+
+@media(max-width:720px){.payment-card{flex-direction:column;align-items:flex-start}}
+.app-container {
+  min-height: 100vh;
+  position: relative;
+}
+
+/* La navbar est fixed en haut avec un z-index élevé */
+app-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50; /* Plus élevé que la sidebar */
+}
+
+/* La sidebar est fixed à gauche avec un z-index moins élevé */
+app-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 40; /* Moins élevé que la navbar */
+  height: 100vh;
+}
+
+/* Contenu principal */
+.app-main {
+  min-height: 100vh;
+  transition: margin-left 0.3s ease;
+}
+
+/* Quand la sidebar est visible (layout normal) */
+.app-main.with-sidebar {
+  margin-left: 288px; /* 72 = largeur sidebar (w-72 = 18rem = 288px) */
+  margin-top: 64px; /* 16 = hauteur navbar (h-16 = 4rem = 64px) */
+}
+
+/* Quand la sidebar est masquée (page auth) */
+.app-main.without-sidebar {
+  margin-left: 0;
+  margin-top: 0;
+}
+
+/* Wrapper du contenu */
+.main-content-wrapper {
+  padding: 24px;
+  min-height: calc(100vh - 64px); /* Hauteur totale - navbar */
+}

@@ -1,0 +1,941 @@
+<div class="min-h-screen bg-slate-50">
+  <div class="max-w-[1400px] mx-auto px-4 lg:px-10 py-8">
+
+    <!-- Hero Section -->
+    <section class="mb-8 rounded-xl bg-gradient-to-br from-primary to-primary/80 p-6 text-white shadow-lg md:p-8">
+      <div class="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <p class="mb-2 text-xs font-semibold uppercase tracking-widest text-white/80">Tasnim C1 • {{ today }}</p>
+          <h1 class="mb-2 text-2xl font-extrabold tracking-tight text-white md:text-3xl">Gestion intelligente des paiements</h1>
+          <p class="text-sm text-white/80">Mois générés automatiquement (Jan 2025 → Fév 2026)</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <span class="rounded-full bg-white/20 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm">Bloc C1</span>
+            <span class="rounded-full bg-white/20 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm">Auto-mois</span>
+            <span class="rounded-full bg-white/20 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm">Parking inclus</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div class="rounded-lg bg-white/10 p-4 backdrop-blur-sm">
+            <p class="text-xs text-white/80">Solde total</p>
+            <div class="text-xl font-bold">{{ formatCurrency(stats().balance) }}</div>
+          </div>
+          <div class="rounded-lg bg-white/10 p-4 backdrop-blur-sm">
+            <p class="text-xs text-white/80">Collecté (mois)</p>
+            <div class="text-xl font-bold">{{ formatCurrency(stats().totalCollected / months.length) }}</div>
+          </div>
+          <div class="rounded-lg bg-white/10 p-4 backdrop-blur-sm">
+            <p class="text-xs text-white/80">Dépenses (mois)</p>
+            <div class="text-xl font-bold">{{ formatCurrency(getAverageExpenses()) }}</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Statistics Grid -->
+    <section class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Total collecté</p>
+        <div class="mt-1 text-2xl font-extrabold text-emerald-700">{{ formatAmount(stats().totalCollected) }} DT</div>
+        <p class="mt-1 text-xs text-slate-400">Validés et réglés</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Dépenses</p>
+        <div class="mt-1 text-2xl font-extrabold text-primary">{{ formatAmount(stats().expensesTotal) }} DT</div>
+        <p class="mt-1 text-xs text-slate-400">Gardien, STEG, Ascenseur…</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Solde</p>
+        <div class="mt-1 text-2xl font-extrabold text-slate-900">{{ formatAmount(stats().balance) }} DT</div>
+        <p class="mt-1 text-xs text-slate-400">Collecté - Dépenses</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Taux de recouvrement</p>
+        <div class="mt-1 text-2xl font-extrabold text-slate-900">{{ stats().collectionRate | number:'1.0-1' }}%</div>
+        <p class="mt-1 text-xs text-slate-400">Charges payées / dues</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Impayés</p>
+        <div class="mt-1 text-2xl font-extrabold text-red-600">{{ formatAmount(stats().totalUnpaid) }} DT</div>
+        <p class="mt-1 text-xs text-slate-400">{{ stats().overdueCount }} appartement(s) en retard</p>
+      </div>
+    </section>
+
+    <!-- Filters -->
+<section class="mb-6 rounded-xl bg-white shadow-sm border border-slate-200 p-5 space-y-4">
+
+  <!-- Top row -->
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+
+    <!-- Search -->
+    <div class="relative w-full lg:w-80">
+      <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔎</span>
+
+      <input
+        aria-label="Rechercher"
+        [ngModel]="search()"
+        (ngModelChange)="search.set($event)"
+        placeholder="Appartement, propriétaire..."
+        class="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-10 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+      />
+
+      @if (search().length) {
+        <button
+          type="button"
+          class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary"
+          (click)="clearSearch()">
+          ✕
+        </button>
+      }
+    </div>
+
+    <!-- Status filter -->
+    <div class="flex items-center bg-slate-100 rounded-lg p-1 text-xs font-semibold">
+
+      <button
+        type="button"
+        class="px-4 py-2 rounded-md transition"
+        [class]="statusFilter() === 'all'
+          ? 'bg-primary text-white shadow'
+          : 'text-slate-600 hover:text-primary'"
+        (click)="setFilter('all')">
+        Tous
+      </button>
+
+      <button
+        type="button"
+        class="px-4 py-2 rounded-md transition"
+        [class]="statusFilter() === 'late'
+          ? 'bg-red-500 text-white shadow'
+          : 'text-slate-600 hover:text-red-500'"
+        (click)="setFilter('late')">
+        En retard
+      </button>
+
+      <button
+        type="button"
+        class="px-4 py-2 rounded-md transition"
+        [class]="statusFilter() === 'up_to_date'
+          ? 'bg-emerald-600 text-white shadow'
+          : 'text-slate-600 hover:text-emerald-600'"
+        (click)="setFilter('up_to_date')">
+        À jour
+      </button>
+
+    </div>
+
+  </div>
+
+  <!-- Bottom row -->
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+
+    <!-- Date filters -->
+    <div class="flex gap-2">
+
+      <select
+        class="rounded-lg border border-slate-200 px-3 py-2 text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+        [ngModel]="selectedYear()"
+        (ngModelChange)="selectedYear.set($event)"
+        [ngModelOptions]="{standalone: true}">
+
+        <option value="">Toutes les années</option>
+
+        @for (y of years(); track y) {
+          <option [value]="y">{{ y }}</option>
+        }
+
+      </select>
+
+      <select
+        class="rounded-lg border border-slate-200 px-3 py-2 text-xs focus:ring-1 focus:ring-primary focus:border-primary outline-none"
+        [ngModel]="selectedMonth()"
+        (ngModelChange)="selectedMonth.set($event)"
+        [ngModelOptions]="{standalone: true}">
+
+        <option value="">Tous les mois</option>
+
+        @for (mo of monthOptions; track mo.value) {
+          <option [value]="mo.value">{{ mo.label }}</option>
+        }
+
+      </select>
+
+      <button
+        class="rounded-lg border border-slate-200 px-3 py-2 text-xs hover:bg-slate-50 text-slate-600 hover:text-primary transition-colors"
+        type="button"
+        (click)="selectedYear.set(''); selectedMonth.set(null)">
+        Reset
+      </button>
+
+    </div>
+
+    <!-- Actions -->
+    <div class="flex flex-wrap gap-2">
+
+      <a
+        [routerLink]="['/historique-paiements']"
+        class="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-primary hover:border-primary/20 transition-colors">
+        Historique Excel
+      </a>
+
+      <button
+        class="rounded-lg bg-red-500 px-4 py-2 text-xs font-semibold text-white hover:bg-red-600 transition-colors"
+        type="button">
+        Export PDF
+      </button>
+
+      <button
+        [routerLink]="['/paiements/affectation']"
+        class="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary/90 transition-colors"
+        type="button">
+        Affectation paiement
+      </button>
+
+      <button
+        class="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-primary hover:border-primary/20 transition-colors"
+        type="button"
+        (click)="refreshData()">
+        ↻ Rafraîchir
+      </button>
+
+    </div>
+
+  </div>
+
+</section>
+
+    <!-- Main Table avec défilement horizontal et menus visibles -->
+    <section class="mb-8 rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="flex items-center justify-between border-b border-slate-200 p-4">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Tableau intelligent</p>
+          <h3 class="text-lg font-extrabold text-slate-900">{{ filteredRows().length }} appartement(s)</h3>
+        </div>
+        <div class="flex gap-4 text-xs font-bold">
+          <span class="flex items-center"><span class="mr-1 h-3 w-3 rounded-full bg-emerald-600"></span> Payé</span>
+          <span class="flex items-center"><span class="mr-1 h-3 w-3 rounded-full bg-orange-500"></span> Retard</span>
+          <span class="flex items-center"><span class="mr-1 h-3 w-3 rounded-full bg-yellow-500"></span> Partiel</span>
+          <span class="flex items-center"><span class="mr-1 h-3 w-3 rounded-full bg-red-500"></span> Impayé</span>
+        </div>
+      </div>
+
+      <!-- Container avec défilement horizontal et overflow visible pour les menus -->
+      <div class="overflow-x-auto overflow-y-visible">
+        <table class="w-full border-collapse text-sm" style="min-width: max-content;">
+          <thead class="bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-600">
+            <tr>
+              <!-- Colonnes fixes à gauche - z-index élevé pour l'en-tête -->
+              <th class="sticky left-0 z-30 border-b border-slate-200 bg-slate-50 px-4 py-3 text-left min-w-[100px]">Bâtiment</th>
+              <th class="sticky left-[100px] z-30 border-b border-slate-200 bg-slate-50 px-4 py-3 text-left min-w-[120px]">Appartement</th>
+              <th class="sticky left-[220px] z-30 border-b border-slate-200 bg-slate-50 px-4 py-3 text-left min-w-[80px]">Étage</th>
+              <th class="sticky left-[300px] z-30 border-b border-slate-200 bg-slate-50 px-4 py-3 text-left min-w-[200px]">PROPRIÉTAIRE</th>
+              
+              <!-- Colonnes des mois (défilables) -->
+              @for (month of visibleMonths(); track month.key) {
+                <th class="border-b border-slate-200 px-3 py-3 text-center font-bold min-w-[100px]">
+                  {{ month.label }}
+                </th>
+              }
+              
+              <!-- Colonnes fixes à droite - z-index élevé pour l'en-tête -->
+              <th class="sticky right-[220px] z-30 border-b border-slate-200 bg-slate-50 px-2 py-3 text-right w-[100px]">Total Payé</th>
+              <th class="border-b border-slate-200 bg-slate-50 px-2 py-3 text-right w-[100px]">Ancien</th>
+              <th class="border-b border-slate-200 bg-slate-50 px-2 py-3 text-right w-[120px]">Reste à payer</th>
+              <th class="sticky right-0 z-30 border-b border-slate-200 bg-slate-50 px-2 py-3 text-center w-[100px]">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of filteredRows(); track row.id) {
+              <tr class="border-b border-slate-100 hover:bg-slate-50">
+                <!-- Colonnes fixes à gauche -->
+                <td class="sticky left-0 z-20 bg-white px-4 py-3 font-medium text-slate-900 whitespace-nowrap">{{ row.batiment || 'Tasnim C1' }}</td>
+                <td class="sticky left-[100px] z-20 bg-white px-4 py-3 whitespace-nowrap">
+                  <div class="flex items-center gap-2">
+                    <span class="font-medium">{{ row.apartment }}</span>
+                    @if (row.hasParking) {
+                      <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">🅿️</span>
+                    }
+                    @if (row.hasAscenseur) {
+                      <span class="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-bold text-indigo-700">🛗</span>
+                    }
+                  </div>
+                </td>
+                <td class="sticky left-[220px] z-20 bg-white px-4 py-3 text-slate-600 whitespace-nowrap">{{ row.floor }}</td>
+                <td class="sticky left-[300px] z-20 bg-white px-4 py-3 whitespace-nowrap">
+                  <div class="font-medium text-slate-900">{{ row.owner }}</div>
+                  @if (row.locataire) {
+                    <small class="text-xs text-slate-500">Locataire: {{ row.locataire }}</small>
+                  }
+                </td>
+
+                <!-- Colonnes des mois (défilables) -->
+                @for (month of visibleMonths(); track month.key) {
+                  <td class="px-3 py-2 min-w-[100px]">
+                    <div [class]="cellClass(row.payments[month.key]) + ' rounded-lg p-2'">
+                      <div class="flex items-center justify-center gap-1">
+                        <span class="text-xs font-bold">{{ cellLabel(row.payments[month.key]) }}</span>
+                        <span class="text-xs font-extrabold">{{ row.payments[month.key].amount }} DT</span>
+                      </div>
+                      <p class="mt-0.5 text-[10px] font-medium text-slate-500 text-center">{{ month.label }}</p>
+                    </div>
+                  </td>
+                }
+
+                <!-- Colonnes fixes à droite -->
+                <td class="sticky right-[220px] z-20 bg-white px-2 py-3 text-right font-extrabold text-slate-900 whitespace-nowrap">{{ formatCurrency(computeRowPaid(row)) }}</td>
+                <td class="bg-white px-2 py-3 text-right font-extrabold text-slate-900">{{ formatCurrency(computeRowCounters(row).arrearsPastYears || 0) }}</td>
+                <td class="bg-white px-2 py-3 text-right font-extrabold text-red-600">{{ formatCurrency(computeRowCounters(row).resteDu) }}</td>
+                <td class="sticky right-0 z-20 bg-white px-2 py-3">
+                  <!-- Menu à 3 points -->
+                  <div class="relative flex justify-center">
+                    <button 
+                      class="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-primary text-sm"
+                      (click)="toggleGlobalActionMenu(row.id)"
+                      title="Actions">
+                      ⋮
+                    </button>
+                    
+                    @if (activeGlobalMenu() === row.id) {
+                      <div class="absolute right-0 top-6 z-40 w-56 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                        <button 
+                          class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap"
+                          (click)="openDetailModalFromRow(row); closeGlobalMenu()">
+                          <span class="text-base">👁️</span> Détails
+                        </button>
+                        <button 
+                          class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap"
+                          (click)="openEditModalFromRow(row); closeGlobalMenu()">
+                          <span class="text-base">✏️</span> Modifier
+                        </button>
+                        <button 
+                          class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap"
+                          (click)="openRelanceModalFromRow(row); closeGlobalMenu()">
+                          <span class="text-base">✉️</span> Relance
+                        </button>
+                        <button 
+                          class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap"
+                          (click)="openRecuModalFromRow(row); closeGlobalMenu()">
+                          <span class="text-base">📄</span> Reçu
+                        </button>
+                      </div>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Pagination -->
+    <div class="flex justify-center items-center gap-2 my-6">
+      <button class="px-3 py-1 rounded border text-xs font-bold" [disabled]="pagination.currentPage() === 1" (click)="pagination.setPage(pagination.currentPage() - 1)">&lt;</button>
+      <span class="text-xs">Page {{ pagination.currentPage() }} / {{ pagination.totalPages() }}</span>
+      <button class="px-3 py-1 rounded border text-xs font-bold" [disabled]="pagination.currentPage() === pagination.totalPages()" (click)="pagination.setPage(pagination.currentPage() + 1)">&gt;</button>
+    </div>
+
+    <!-- Expenses Section -->
+    <section class="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div class="mb-4 flex items-center justify-between">
+        <h4 class="text-lg font-extrabold text-slate-900">Dépenses de copropriété</h4>
+        <div class="text-sm font-bold text-slate-500">Total: {{ formatCurrency(getTotalExpenses()) }}</div>
+      </div>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        @for (exp of expenses(); track exp.label) {
+          <div class="rounded-lg border-l-4 bg-slate-50 p-4" [style.border-left-color]="exp.color">
+            <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{{ exp.label }}</p>
+            <div class="text-lg font-extrabold text-slate-900">{{ formatCurrency(exp.amount) }}</div>
+            <p class="text-xs font-medium text-slate-400">{{ exp.month }}</p>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- Unpaid by Floor Section -->
+    <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div class="mb-4">
+        <h4 class="text-lg font-extrabold text-slate-900">Impayés par étage</h4>
+        <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">Suivi des retards par niveau</p>
+      </div>
+      <div class="space-y-4">
+        @for (item of unpaidByFloor(); track item.floor) {
+          <div class="flex items-center gap-4">
+            <div class="w-16 font-extrabold text-slate-900">{{ item.floor }}</div>
+            <div class="flex-1">
+              <div class="h-8 w-full rounded-full bg-slate-100">
+                <div class="relative h-8 rounded-full bg-primary" [style.width]="(item.unpaid / item.due) * 100 + '%'">
+                  <span class="absolute right-0 top-0 -translate-y-8 rounded bg-primary px-2 py-1 text-xs font-bold text-white">{{ formatCurrency(item.unpaid) }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="w-16 text-right font-extrabold text-slate-900">{{ (item.unpaid / item.due) * 100 | number:'1.0-0' }}%</div>
+          </div>
+        }
+      </div>
+    </section>
+  </div>
+
+  <!-- MODAL DÉTAIL COMPLET -->
+  @if (showFullDetailModal()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" (click)="closeModals()">
+      <div class="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-xl bg-white shadow-xl" (click)="$event.stopPropagation()">
+        <div class="flex items-center justify-between border-b border-slate-200 p-6">
+          <h3 class="text-lg font-extrabold text-slate-900">
+            @switch (activeAction()) {
+              @case ('edit') { Modifier les paiements - {{ selectedRowForDetail()?.apartment }} }
+              @case ('relance') { Relancer les impayés - {{ selectedRowForDetail()?.apartment }} }
+              @case ('recu') { Reçus de paiement - {{ selectedRowForDetail()?.apartment }} }
+              @default { Détail complet - {{ selectedRowForDetail()?.apartment }} }
+            }
+          </h3>
+          <button class="text-slate-400 hover:text-slate-600" (click)="closeModals()">✕</button>
+        </div>
+        
+        @if (selectedRowForDetail()) {
+          <div class="p-6">
+            <!-- En-tête du détail -->
+            <div class="mb-6 flex items-start justify-between">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Appartement {{ selectedRowForDetail()?.apartment }} • {{ selectedRowForDetail()?.owner }}
+                </p>
+                <h4 class="text-lg font-extrabold text-slate-900">
+                  {{ formatCurrency(computeRowPaid(selectedRowForDetail()!)) }} payé / 
+                  {{ formatCurrency(computeRowCounters(selectedRowForDetail()!).totalDue) }} dû
+                </h4>
+              </div>
+            </div>
+
+            <!-- Arriérés par année -->
+            <div class="mb-6">
+              <h5 class="mb-3 text-sm font-bold uppercase tracking-wider text-slate-600">Arriérés par année</h5>
+              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                @for (item of getArrearsByYear(selectedRowForDetail()!); track item.year) {
+                  <div class="rounded-lg border border-slate-200 bg-white p-4">
+                    <div class="mb-2 flex items-center justify-between">
+                      <span class="font-extrabold text-slate-900">{{ item.year }}</span>
+                      <span class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-600">
+                        {{ item.unpaidMonths }} mois impayés
+                      </span>
+                    </div>
+                    <div class="space-y-1 text-sm">
+                      <span class="block text-slate-500">Dû: {{ formatCurrency(item.due) }}</span>
+                      <span class="block text-slate-500">Payé: {{ formatCurrency(item.paid) }}</span>
+                      <span class="block font-extrabold text-red-600">Reste: {{ formatCurrency(item.unpaid) }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Historique des paiements -->
+            <div class="mb-6">
+              <div class="mb-3 flex items-center justify-between">
+                <h5 class="text-sm font-bold uppercase tracking-wider text-slate-600">Historique</h5>
+                <p class="text-xs text-slate-500">
+                  @switch (activeAction()) {
+                    @case ('edit') { 📝 Cliquez sur un mois pour modifier }
+                    @case ('relance') { 📧 Cliquez sur un impayé pour relancer }
+                    @case ('recu') { 🧾 Cliquez sur un paiement pour voir le reçu }
+                    @default { 👁️ Cliquez sur un mois pour voir le détail }
+                  }
+                </p>
+              </div>
+              <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-7">
+                @for (month of visibleMonths(); track month.key) {
+                  <div 
+                    class="cursor-pointer rounded-lg border p-3 transition-colors hover:shadow-md" 
+                    [class]="cellClass(selectedRowForDetail()!.payments[month.key])"
+                    (click)="handleHistoryClick(selectedRowForDetail()!, month.key, activeAction())">
+                    <p class="text-xs font-bold text-slate-500">{{ month.label }}</p>
+                    <div class="font-extrabold text-slate-900">
+                      {{ selectedRowForDetail()!.payments[month.key].amount }} DT
+                    </div>
+                    <p class="text-xs font-bold">{{ cellLabel(selectedRowForDetail()!.payments[month.key]) }}</p>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Boutons d'action -->
+            <div class="flex gap-3">
+              <button class="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white hover:bg-primary/90" 
+                      type="button" (click)="printHistory(selectedRowForDetail()!)">
+                Imprimer
+              </button>
+              <button class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50" 
+                      type="button" (click)="exportHistoryPDF(selectedRowForDetail()!)">
+                Exporter PDF
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Modal Détail simple -->
+  @if (showDetailModal()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" (click)="closeModals()">
+      <div class="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white shadow-xl" (click)="$event.stopPropagation()">
+        <div class="flex items-center justify-between border-b border-slate-200 p-6">
+          <h3 class="text-lg font-extrabold text-slate-900">Détail du paiement</h3>
+          <button class="text-slate-400 hover:text-slate-600" (click)="closeModals()">✕</button>
+        </div>
+        <div class="space-y-4 p-6">
+          <div class="flex justify-between border-b border-slate-100 pb-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Copropriétaire :</span>
+            <span class="font-bold text-slate-900">{{ selectedPayment()?.coproprietaire }}</span>
+          </div>
+          <div class="flex justify-between border-b border-slate-100 pb-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Locataire :</span>
+            <span class="font-bold text-slate-900">{{ selectedPayment()?.locataire || '-' }}</span>
+          </div>
+          <div class="flex justify-between border-b border-slate-100 pb-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Lot :</span>
+            <span class="font-bold text-slate-900">{{ selectedPayment()?.lot }}</span>
+          </div>
+
+          <!-- Détail des charges pour ce mois -->
+          <div class="border-b border-slate-100 pb-3">
+            <span class="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Détail des charges :
+            </span>
+            @if (selectedChargesBreakdown().length === 0) {
+              <span class="text-sm italic text-slate-400">Chargement...</span>
+            } @else if (selectedChargesBreakdown().length === 1) {
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-slate-700">{{ selectedChargesBreakdown()[0].libelle }}</span>
+                <span class="text-sm font-bold text-slate-900">{{ selectedChargesBreakdown()[0].montant.toFixed(2) }} DT</span>
+              </div>
+            } @else {
+              <div class="overflow-hidden rounded-lg border border-slate-200 text-sm">
+                @for (item of selectedChargesBreakdown(); track item.chargeId) {
+                  <div class="flex items-center justify-between border-b border-slate-100 px-3 py-2 last:border-0 hover:bg-slate-50">
+                    <span class="flex-1 pr-2 text-slate-600">{{ item.libelle }}</span>
+                    <span class="shrink-0 font-bold text-slate-900">{{ item.montant.toFixed(2) }} DT</span>
+                  </div>
+                }
+                <div class="flex items-center justify-between border-t border-primary/20 bg-primary/5 px-3 py-2">
+                  <span class="text-xs font-extrabold uppercase tracking-wider text-primary">Total</span>
+                  <span class="font-extrabold text-primary">{{ (selectedPayment()?.montant || 0).toFixed(2) }} DT</span>
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="flex justify-between border-b border-slate-100 pb-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Montant dû :</span>
+            <span class="font-extrabold text-slate-900">{{ formatCurrency(selectedPayment()?.montant || 0) }}</span>
+          </div>
+          @if (selectedPayment()?.statut === 'partial') {
+            <div class="flex justify-between border-b border-slate-100 pb-2">
+              <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Déjà payé :</span>
+              <span class="font-extrabold text-emerald-600">{{ formatCurrency(selectedPayment()?.paidAmount || 0) }}</span>
+            </div>
+            <div class="flex justify-between border-b border-slate-100 pb-2">
+              <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Reste à payer :</span>
+              <span class="font-extrabold text-red-600">{{ formatCurrency(selectedPayment()?.resteAPayer || 0) }}</span>
+            </div>
+          }
+          <div class="flex justify-between border-b border-slate-100 pb-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Date de paiement :</span>
+            <span class="font-bold text-slate-900">{{ selectedPayment()?.datePaiement | date:'dd/MM/yyyy' }}</span>
+          </div>
+          <div class="flex justify-between border-b border-slate-100 pb-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Mode de paiement :</span>
+            <span class="font-bold text-slate-900">{{ getModePaiementLabel(selectedPayment()?.modePaiement) }}</span>
+          </div>
+          <div class="flex justify-between border-b border-slate-100 pb-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Référence :</span>
+            <span class="font-bold text-slate-900">{{ selectedPayment()?.reference }}</span>
+          </div>
+          <div class="flex justify-between border-b border-slate-100 pb-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Statut :</span>
+            <span class="font-bold" [class.text-emerald-600]="selectedPayment()?.statut === 'paid'" 
+                  [class.text-orange-500]="selectedPayment()?.statut === 'late'"
+                  [class.text-yellow-500]="selectedPayment()?.statut === 'partial'"
+                  [class.text-red-600]="selectedPayment()?.statut === 'unpaid'">
+              {{ getStatusLabel(selectedPayment()?.statut) }}
+            </span>
+          </div>
+          @if (selectedPayment()?.recuUrl) {
+            <div class="flex justify-between pb-2">
+              <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Reçu :</span>
+              <button class="font-bold text-primary hover:text-primary/80" (click)="downloadRecu(selectedPayment()?.recuUrl)">
+                📄 Télécharger le reçu
+              </button>
+            </div>
+          }
+        </div>
+        <div class="flex justify-end gap-3 border-t border-slate-200 p-6">
+          <button class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50" (click)="closeModals()">Fermer</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Modal Modifier -->
+  @if (showEditModal()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" (click)="closeModals()">
+      <div class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white shadow-xl" (click)="$event.stopPropagation()">
+        <div class="flex items-center justify-between border-b border-slate-200 p-6">
+          <h3 class="text-lg font-extrabold text-slate-900">Modifier le paiement - {{ selectedPayment()?.monthLabel }}</h3>
+          <button class="text-slate-400 hover:text-slate-600" (click)="closeModals()">✕</button>
+        </div>
+        <form [formGroup]="editForm" (ngSubmit)="savePaymentWithFifo()">
+          <div class="space-y-4 p-6">
+            <div>
+              <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Copropriétaire :</label>
+              <input type="text" formControlName="coproprietaire" class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-500" readonly>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Lot :</label>
+              <input type="text" formControlName="lot" class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-500" readonly>
+            </div>
+
+            <!-- Détail des charges pour ce mois -->
+            <div>
+              <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">
+                Détail des charges :
+              </label>
+              @if (selectedChargesBreakdown().length === 0) {
+                <div class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  <div class="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                  <span class="text-sm italic text-slate-400">Chargement des charges...</span>
+                </div>
+              } @else if (selectedChargesBreakdown().length === 1) {
+                <div class="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                  <span class="text-sm text-slate-700">{{ selectedChargesBreakdown()[0].libelle }}</span>
+                  <span class="ml-4 shrink-0 text-sm font-bold text-slate-900">{{ selectedChargesBreakdown()[0].montant.toFixed(2) }} DT</span>
+                </div>
+              } @else {
+                <div class="overflow-hidden rounded-lg border border-slate-200 text-sm">
+                  @for (item of selectedChargesBreakdown(); track item.chargeId) {
+                    <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-3 py-2 last:border-0">
+                      <span class="flex-1 pr-2 text-slate-600">{{ item.libelle }}</span>
+                      <span class="shrink-0 font-bold text-slate-900">{{ item.montant.toFixed(2) }} DT</span>
+                    </div>
+                  }
+                  <div class="flex items-center justify-between border-t border-primary/20 bg-primary/5 px-3 py-2">
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-primary">Total</span>
+                    <span class="font-extrabold text-primary">{{ (selectedPayment()?.montantDu || selectedPayment()?.montant || 0).toFixed(2) }} DT</span>
+                  </div>
+                </div>
+              }
+            </div>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Montant (DT) :</label>
+                <input type="number" formControlName="montant" step="0.01" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+              </div>
+              <div>
+                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Date de paiement :</label>
+                <input type="date" formControlName="datePaiement" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+              </div>
+            </div>
+            @if (selectedPayment()?.statut === 'partial') {
+              <div class="flex items-center gap-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                <div class="flex-1">
+                  <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Déjà payé :</span>
+                  <span class="ml-2 font-extrabold text-emerald-600">{{ formatCurrency(selectedPayment()?.paidAmount || 0) }}</span>
+                </div>
+                <div class="flex-1">
+                  <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Reste à payer :</span>
+                  <span class="ml-2 font-extrabold text-red-600">{{ formatCurrency(selectedPayment()?.resteAPayer || 0) }}</span>
+                </div>
+              </div>
+            }
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Mode de paiement :</label>
+                <select formControlName="modePaiement" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                  <option value="carte">Carte bancaire</option>
+                  <option value="virement">Virement</option>
+                  <option value="especes">Espèces</option>
+                  <option value="cheque">Chèque</option>
+                </select>
+              </div>
+              <div>
+                <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Référence :</label>
+                <input type="text" formControlName="reference" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+              </div>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Statut :</label>
+              <select formControlName="statut" class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
+                <option value="paid">✅ Payé</option>
+                <option value="late">⏳ Retard</option>
+                <option value="partial">⚠️ Partiel</option>
+                <option value="unpaid">❌ Impayé</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex justify-end gap-3 border-t border-slate-200 p-6">
+            <button type="button" class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50" (click)="closeModals()">Annuler</button>
+            <button type="submit" class="rounded-lg bg-primary px-4 py-2 text-xs font-bold text-white hover:bg-primary/90">Enregistrer</button>
+          </div>
+        </form>
+
+        @if (selectedPayment()?.paymentId) {
+          <div class="mx-6 mb-6 mt-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+            <p class="mb-2 text-xs font-bold text-primary">Affectation FIFO</p>
+            <p class="text-xs text-slate-600">
+              Le paiement sera automatiquement affecté aux dettes les plus anciennes.
+            </p>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ── Modal Reçu — Design moderne ────────────────────────────────────── -->
+  @if (showRecuModal()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+         (click)="closeModals()">
+      <div class="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/10"
+           (click)="$event.stopPropagation()">
+
+        <!-- ── Bandeau coloré ────────────────────────────────────────────── -->
+        <div class="relative bg-gradient-to-r from-primary to-primary/80 px-6 pt-6 pb-10">
+
+          <!-- Bouton fermer -->
+          <button (click)="closeModals()"
+                  class="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors text-lg font-bold">
+            ×
+          </button>
+
+          <!-- Logo + Titre -->
+          <div class="flex items-center gap-3 mb-4">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 text-white font-black text-sm">
+              SP
+            </div>
+          <div>
+            <p class="text-primary/70 text-xs font-semibold uppercase tracking-widest">Syndicat de Copropriété</p>
+            <p class="text-white font-extrabold text-sm">Résidence Tasnim</p>
+          </div>
+          </div>
+
+          <!-- Numéro reçu + date -->
+          <div class="flex items-end justify-between">
+            <div>
+              <p class="text-emerald-200 text-xs font-semibold uppercase tracking-wide mb-0.5">Reçu de paiement</p>
+              <p class="text-white font-black text-xl">{{ selectedPayment()?.recuNumero || ('R-' + dateNow) }}</p>
+            </div>
+          <div class="text-right">
+            <p class="text-primary/70 text-xs">Date</p>
+            <p class="text-white font-bold text-sm">{{ selectedPayment()?.datePaiement | date:'dd/MM/yyyy' }}</p>
+          </div>
+          </div>
+
+          <!-- Arc décoratif en bas du bandeau -->
+          <div class="absolute -bottom-px left-0 right-0 overflow-hidden h-6">
+            <svg viewBox="0 0 400 24" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" class="w-full h-full">
+              <path d="M0,24 C100,0 300,0 400,24 L400,24 L0,24 Z" fill="white"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- ── Corps du reçu ─────────────────────────────────────────────── -->
+        <div class="px-6 pt-4 pb-2 space-y-4">
+
+          <!-- Copropriétaire + Lot -->
+          <div class="rounded-xl bg-slate-50 border border-slate-100 p-4">
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Copropriétaire</p>
+            <p class="font-extrabold text-slate-900 text-base">{{ selectedPayment()?.coproprietaire || '—' }}</p>
+            <p class="text-sm text-slate-500 mt-0.5">{{ selectedPayment()?.lot || '—' }}</p>
+          </div>
+
+          <!-- Grille de détails -->
+          <div class="space-y-0 divide-y divide-slate-100">
+            <div class="flex items-center justify-between py-2.5">
+              <span class="text-xs font-semibold text-slate-500">Libellé</span>
+              <span class="text-sm font-semibold text-slate-900 text-right max-w-[55%] leading-tight">{{ selectedPayment()?.charge || '—' }}</span>
+            </div>
+            <div class="flex items-center justify-between py-2.5">
+              <span class="text-xs font-semibold text-slate-500">Mode de paiement</span>
+              <span class="text-sm font-semibold text-slate-900">{{ getModePaiementLabel(selectedPayment()?.modePaiement) }}</span>
+            </div>
+            <div class="flex items-center justify-between py-2.5">
+              <span class="text-xs font-semibold text-slate-500">Référence</span>
+              <span class="text-sm font-mono font-bold text-slate-700">{{ selectedPayment()?.reference || '—' }}</span>
+            </div>
+            <div class="flex items-center justify-between py-2.5">
+              <span class="text-xs font-semibold text-slate-500">Statut</span>
+              <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700">
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                {{ getStatusLabel(selectedPayment()?.statut) }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Bloc montant -->
+          <div class="rounded-2xl bg-gradient-to-r from-primary to-primary/80 p-4 flex items-center justify-between">
+            <div>
+              <p class="text-primary/70 text-xs font-semibold uppercase tracking-wide">Montant total payé</p>
+              <p class="text-white font-black text-2xl mt-0.5">{{ formatCurrency(selectedPayment()?.montant || 0) }}</p>
+            </div>
+            <!-- Cachet visuel -->
+            <div class="flex h-14 w-14 items-center justify-center rounded-full border-2 border-white/40 bg-white/20">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Mention légale -->
+          <p class="text-center text-xs text-slate-400">
+            Document généré automatiquement par SyndicPro
+          </p>
+        </div>
+
+        <!-- ── Actions ──────────────────────────────────────────────────── -->
+        <div class="flex gap-3 border-t border-slate-100 px-6 py-4">
+          <button (click)="closeModals()"
+                  class="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+            Fermer
+          </button>
+            <button (click)="downloadRecuPDF()"
+              [disabled]="generatingPdf()"
+              class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-2.5 text-sm font-bold text-white hover:bg-primary/90 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-sm shadow-primary/20">
+            @if (generatingPdf()) {
+              <span class="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              Génération…
+            } @else {
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              Télécharger le PDF
+            }
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- ── Modal Relance — Notification au copropriétaire ──────────────────── -->
+  @if (showRelanceModal()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+         (click)="closeModals()">
+      <div class="relative w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/10"
+           (click)="$event.stopPropagation()">
+
+        <!-- ── En-tête ────────────────────────────────────────────────────── -->
+        <div class="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-5">
+          <button (click)="closeModals()"
+                  class="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors text-lg font-bold">
+            ×
+          </button>
+          <div class="flex items-center gap-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+              </svg>
+            </div>
+            <div>
+              <p class="text-orange-100 text-xs font-semibold uppercase tracking-widest">Notification</p>
+              <p class="text-white font-extrabold text-base">Envoyer une relance</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Corps ──────────────────────────────────────────────────────── -->
+        <div class="px-6 py-5 space-y-4">
+
+          <!-- Destinataire -->
+          <div class="flex items-center gap-3 rounded-xl bg-amber-50 border border-amber-100 px-4 py-3">
+            <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-amber-500 text-white font-black text-sm">
+              {{ (selectedPayment()?.coproprietaire || '?').charAt(0).toUpperCase() }}
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-amber-600 uppercase tracking-wide">Destinataire</p>
+              <p class="font-bold text-slate-900 text-sm">{{ selectedPayment()?.coproprietaire || '—' }}</p>
+              @if (selectedPayment()?.email) {
+                <p class="text-xs text-slate-400">{{ selectedPayment()?.email }}</p>
+              }
+            </div>
+          </div>
+
+          <!-- Aperçu du message -->
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-base">📱</span>
+              <p class="text-xs font-bold text-slate-500 uppercase tracking-wide">Aperçu de la notification</p>
+            </div>
+
+            <!-- Notification preview -->
+            <div class="rounded-xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+              <!-- Barre de statut mobile fictive -->
+              <div class="bg-slate-900 px-4 py-1.5 flex items-center justify-between">
+                <span class="text-white text-xs font-bold">SyndicPro</span>
+                <div class="flex items-center gap-1">
+                  <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
+                  <span class="text-slate-400 text-xs">maintenant</span>
+                </div>
+              </div>
+              <div class="p-3">
+                <p class="text-xs font-black text-slate-900 mb-1">
+                  ⚠️ Rappel de paiement — {{ selectedPayment()?.charge || 'Charges communes' }}
+                </p>
+                <p class="text-xs text-slate-500 leading-relaxed">
+                  Cher(e) <strong class="text-slate-700">{{ selectedPayment()?.coproprietaire }}</strong>,
+                  votre paiement de
+                  <strong class="text-amber-600">{{ formatCurrency(selectedPayment()?.montant || 0) }}</strong>
+                  est en attente depuis le {{ formatDateRelance(selectedPayment()?.dateEcheance) }}.
+                </p>
+                <div class="mt-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-1.5">
+                  <p class="text-xs font-bold text-amber-700">Voir mes paiements →</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Info sur le type de notification -->
+          <div class="flex items-start gap-2 rounded-xl bg-blue-50 border border-blue-100 px-4 py-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p class="text-xs text-blue-700 leading-relaxed">
+              La notification sera visible dans le centre d'alertes du copropriétaire lors de sa prochaine connexion.
+            </p>
+          </div>
+
+        </div>
+
+        <!-- ── Actions ──────────────────────────────────────────────────── -->
+        <div class="flex gap-3 border-t border-slate-100 px-6 py-4">
+          <button (click)="closeModals()"
+                  class="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+            Annuler
+          </button>
+          <button (click)="sendRelance()"
+                  [disabled]="sendingRelance()"
+                  class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-amber-500 py-2.5 text-sm font-bold text-white hover:bg-amber-600 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-sm shadow-amber-200">
+            @if (sendingRelance()) {
+              <span class="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              Envoi…
+            } @else {
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+              </svg>
+              Envoyer la relance
+            }
+          </button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+  <!-- Toast Notifications -->
+  <div class="fixed bottom-4 right-4 z-50 space-y-2" aria-live="polite">
+    @for (toast of toasts(); track toast.id) {
+      <div class="animate-slide-in rounded-lg px-4 py-3 text-xs font-bold text-white shadow-lg" [class]="{
+        'bg-emerald-600': toast.type === 'success',
+        'bg-red-600': toast.type === 'error',
+        'bg-primary': toast.type === 'info'
+      }">{{ toast.message }}</div>
+    }
+  </div>
+</div>

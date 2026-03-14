@@ -1,0 +1,25 @@
+.sidenav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: #0f172a;
+  min-width: 180px;
+}
+
+.sidenav a {
+  color: #e2e8f0;
+  text-decoration: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.sidenav a:hover {
+  background: #1e293b;
+}
+
+.sidenav a.active {
+  background: #0ea5e9;
+  color: #0f172a;
+}

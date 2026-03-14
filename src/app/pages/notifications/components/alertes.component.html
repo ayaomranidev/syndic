@@ -1,0 +1,410 @@
+<div class="min-h-screen bg-slate-50 px-3 sm:px-4 lg:px-6 xl:px-10 py-4 sm:py-6 lg:py-8">
+
+  <!-- ══════════════ HEADER ══════════════ -->
+  <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+    <div>
+      <p class="text-[10px] sm:text-xs font-bold text-primary uppercase tracking-widest mb-0.5 sm:mb-1">
+        Communication · SyndicPro
+      </p>
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Centre de notifications</h1>
+      <p class="text-slate-500 text-xs sm:text-sm mt-0.5 sm:mt-1">Toutes vos alertes et communications en un seul endroit</p>
+    </div>
+    <div class="flex items-center gap-2 w-full sm:w-auto">
+      @if (nbNonLues() > 0) {
+        <button (click)="marquerToutesLues()"
+          class="flex-1 sm:flex-none px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl border border-slate-200 bg-white
+                 text-slate-600 hover:bg-slate-50 font-semibold text-xs sm:text-sm
+                 transition-colors shadow-sm flex items-center justify-center gap-1">
+          <span class="text-sm sm:text-base">✓</span>
+          <span class="hidden xs:inline">Tout marquer lu ({{ nbNonLues() }})</span>
+          <span class="xs:hidden">Tout lire</span>
+        </button>
+      }
+    </div>
+  </header>
+
+  <!-- ══════════════ KPI CARDS ══════════════ -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 mb-6 sm:mb-8">
+    
+    <!-- Total -->
+    <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-4 lg:p-5">
+      <div class="flex justify-between items-start mb-1 sm:mb-2">
+        <span class="text-xs sm:text-sm text-slate-400">🔔</span>
+        <span class="text-[8px] sm:text-[10px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full">Total</span>
+      </div>
+      <p class="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tabular-nums">{{ totalAlertes() }}</p>
+      <p class="text-[8px] sm:text-xs text-slate-400 mt-0.5 sm:mt-1">Toutes alertes</p>
+    </div>
+
+    <!-- Non lues -->
+    <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-4 lg:p-5">
+      <div class="flex justify-between items-start mb-1 sm:mb-2">
+        <span class="text-xs sm:text-sm text-blue-500">📬</span>
+        <span class="text-[8px] sm:text-[10px] font-bold bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">Non lues</span>
+      </div>
+      <p class="text-xl sm:text-2xl lg:text-3xl font-black text-blue-600 tabular-nums">{{ nbNonLues() }}</p>
+      <p class="text-[8px] sm:text-xs text-slate-400 mt-0.5 sm:mt-1">À traiter</p>
+    </div>
+
+    <!-- Critiques -->
+    <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-4 lg:p-5">
+      <div class="flex justify-between items-start mb-1 sm:mb-2">
+        <span class="text-xs sm:text-sm text-red-500">🔴</span>
+        <span class="text-[8px] sm:text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full">Critiques</span>
+      </div>
+      <p class="text-xl sm:text-2xl lg:text-3xl font-black text-red-600 tabular-nums">{{ nbCritiques() }}</p>
+      <p class="text-[8px] sm:text-xs text-slate-400 mt-0.5 sm:mt-1">Non lues critiques</p>
+    </div>
+
+    <!-- Haute priorité -->
+    <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-4 lg:p-5">
+      <div class="flex justify-between items-start mb-1 sm:mb-2">
+        <span class="text-xs sm:text-sm text-orange-500">🟠</span>
+        <span class="text-[8px] sm:text-[10px] font-bold bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full">Haute</span>
+      </div>
+      <p class="text-xl sm:text-2xl lg:text-3xl font-black text-orange-600 tabular-nums">{{ nbHaute() }}</p>
+      <p class="text-[8px] sm:text-xs text-slate-400 mt-0.5 sm:mt-1">Haute priorité</p>
+    </div>
+  </div>
+
+  <!-- ══════════════ FILTRES ══════════════ -->
+  <div class="bg-white border border-slate-200 rounded-xl sm:rounded-2xl shadow-sm px-3 sm:px-4 py-2 sm:py-3 mb-4 sm:mb-6
+              flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+
+    <!-- Recherche -->
+    <div class="flex items-center gap-1.5 sm:gap-2 flex-1 w-full sm:w-auto min-w-0">
+      <span class="text-slate-400 text-sm sm:text-base">🔎</span>
+      <input
+        class="flex-1 bg-transparent text-xs sm:text-sm text-slate-700 placeholder-slate-400
+               outline-none border-none focus:ring-0 py-1.5"
+        [ngModel]="recherche()"
+        (ngModelChange)="recherche.set($event)"
+        placeholder="Rechercher une notification..." />
+      @if (recherche()) {
+        <button
+          class="text-slate-400 hover:text-slate-600 text-xs sm:text-sm transition-colors p-1"
+          type="button"
+          (click)="recherche.set('')">
+          ✕
+        </button>
+      }
+    </div>
+
+    <div class="w-full h-px sm:w-px sm:h-6 bg-slate-200 sm:block"></div>
+
+    <!-- Filtres -->
+    <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+      
+      <!-- Filtre statut -->
+      <select
+        class="flex-1 sm:flex-none text-xs sm:text-sm text-slate-600 border border-slate-200 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2
+               bg-white focus:outline-none focus:ring-2 focus:ring-primary/30
+               focus:border-primary transition-all cursor-pointer min-w-[100px]"
+        [ngModel]="filtreStatut()"
+        (ngModelChange)="filtreStatut.set($event)">
+        <option value="toutes">Tous statuts</option>
+        <option value="non_lues">Non lues ({{ nbNonLues() }})</option>
+        <option value="lues">Lues ({{ nbLues() }})</option>
+      </select>
+
+      <!-- Filtre priorité -->
+      <select
+        class="flex-1 sm:flex-none text-xs sm:text-sm text-slate-600 border border-slate-200 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2
+               bg-white focus:outline-none focus:ring-2 focus:ring-primary/30
+               focus:border-primary transition-all cursor-pointer min-w-[100px]"
+        [ngModel]="filtrePriorite()"
+        (ngModelChange)="filtrePriorite.set($event)">
+        <option value="">Toutes priorités</option>
+        <option value="CRITIQUE">🔴 Critique</option>
+        <option value="HAUTE">🟠 Haute</option>
+        <option value="NORMALE">🔵 Normale</option>
+        <option value="INFO">⚪ Info</option>
+      </select>
+
+      <!-- Filtre type -->
+      <select
+        class="flex-1 sm:flex-none text-xs sm:text-sm text-slate-600 border border-slate-200 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2
+               bg-white focus:outline-none focus:ring-2 focus:ring-primary/30
+               focus:border-primary transition-all cursor-pointer min-w-[120px]"
+        [ngModel]="filtreType()"
+        (ngModelChange)="filtreType.set($event)">
+        <option value="">Tous types</option>
+        <option value="IMPAYÉ">💳 Paiements</option>
+        <option value="RELANCE">📮 Relances</option>
+        <option value="CHARGE">🧾 Charges</option>
+        <option value="REUNION">📅 Réunions</option>
+        <option value="DOCUMENT">📄 Documents</option>
+        <option value="MAINTENANCE">🔧 Maintenance</option>
+        <option value="BUDGET">💰 Budget</option>
+        <option value="VOTE">🗳️ Votes</option>
+        <option value="SYSTEME">⚙️ Système</option>
+      </select>
+
+      @if (recherche() || filtreType() || filtrePriorite() || filtreStatut() !== 'toutes') {
+        <button
+          class="text-[10px] sm:text-xs text-primary hover:text-primary/80 font-semibold
+                 underline underline-offset-2 transition-colors whitespace-nowrap"
+          type="button"
+          (click)="reinitialiserFiltres()">
+          Réinitialiser
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- ══════════════ CONTENU ══════════════ -->
+  <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+
+    <!-- Titre section -->
+    <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex items-center justify-between">
+      <div>
+        <p class="text-[9px] sm:text-xs text-slate-500 font-semibold uppercase tracking-wider">Notifications</p>
+        <h3 class="text-sm sm:text-base font-bold text-slate-900">{{ alertesFiltrees().length }} notification(s)</h3>
+      </div>
+    </div>
+
+    <!-- Loading skeleton -->
+    @if (loading()) {
+      <div class="p-4 sm:p-6 space-y-3">
+        @for (i of [1,2,3,4]; track i) {
+          <div class="flex items-start gap-3 sm:gap-4 animate-pulse">
+            <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-slate-200"></div>
+            <div class="flex-1 space-y-2">
+              <div class="h-3 sm:h-4 bg-slate-200 rounded w-1/4"></div>
+              <div class="h-3 sm:h-4 bg-slate-200 rounded w-3/4"></div>
+              <div class="h-2 sm:h-3 bg-slate-200 rounded w-1/5"></div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- État vide -->
+    @else if (alertesFiltrees().length === 0) {
+      <div class="p-8 sm:p-12 lg:p-16 text-center">
+        <div class="flex flex-col items-center">
+          <span class="text-3xl sm:text-4xl lg:text-5xl mb-3 sm:mb-4">✅</span>
+          <p class="text-sm sm:text-base text-slate-700 font-semibold">Aucune notification trouvée</p>
+          <p class="text-slate-400 text-xs sm:text-sm mt-1">
+            @if (recherche() || filtreType() || filtrePriorite() || filtreStatut() !== 'toutes') {
+              Modifiez vos filtres pour voir plus de résultats.
+            } @else {
+              Toutes vos notifications apparaîtront ici.
+            }
+          </p>
+        </div>
+      </div>
+    }
+
+    <!-- Liste des notifications -->
+    @else {
+      <!-- Version mobile : cartes -->
+      <div class="block lg:hidden divide-y divide-slate-100">
+        @for (alerte of pagination.pagedItems(); track alerte.id) {
+          <div class="p-4 hover:bg-slate-50/70 transition-colors group">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex items-start gap-2">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0"
+                     [class.bg-red-100]="alerte.type === 'IMPAYÉ' || alerte.type === 'RELANCE'"
+                     [class.bg-amber-100]="alerte.type === 'BUDGET'"
+                     [class.bg-blue-100]="alerte.type === 'REUNION'"
+                     [class.bg-indigo-100]="alerte.type === 'DOCUMENT'"
+                     [class.bg-orange-100]="alerte.type === 'MAINTENANCE'"
+                     [class.bg-teal-100]="alerte.type === 'CHARGE'"
+                     [class.bg-purple-100]="alerte.type === 'VOTE'"
+                     [class.bg-emerald-100]="alerte.type === 'BIENVENUE'"
+                     [class.bg-slate-100]="alerte.type === 'SYSTEME'">
+                  <span>{{ typeIcon(alerte.type) }}</span>
+                </div>
+                <div>
+                  <p class="font-semibold text-slate-900 text-sm sm:text-base">{{ alerte.titre }}</p>
+                  <div class="flex items-center gap-2 mt-1">
+                    <span class="text-[9px] sm:text-xs px-1.5 py-0.5 rounded-full font-semibold"
+                          [class.bg-red-100]="alerte.priorite === 'CRITIQUE'"
+                          [class.text-red-700]="alerte.priorite === 'CRITIQUE'"
+                          [class.bg-orange-100]="alerte.priorite === 'HAUTE'"
+                          [class.text-orange-700]="alerte.priorite === 'HAUTE'"
+                          [class.bg-blue-100]="alerte.priorite === 'NORMALE'"
+                          [class.text-blue-700]="alerte.priorite === 'NORMALE'"
+                          [class.bg-slate-100]="alerte.priorite === 'INFO'"
+                          [class.text-slate-600]="alerte.priorite === 'INFO'">
+                      {{ prioriteIcon(alerte.priorite) }} {{ prioriteLabel(alerte.priorite) }}
+                    </span>
+                    @if (!alerte.lue) {
+                      <span class="text-[9px] sm:text-xs font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">Nouveau</span>
+                    }
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center gap-1">
+                @if (!alerte.lue) {
+                  <button
+                    class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg hover:bg-emerald-50 text-slate-400
+                           hover:text-emerald-600 flex items-center justify-center
+                           transition-colors text-xs"
+                    type="button"
+                    aria-label="Marquer comme lu"
+                    (click)="marquerLue(alerte)">
+                    ✓
+                  </button>
+                }
+                <button
+                  class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg hover:bg-red-50 text-slate-400
+                         hover:text-red-500 flex items-center justify-center
+                         transition-colors text-xs"
+                  type="button"
+                  aria-label="Supprimer"
+                  (click)="supprimer(alerte)">
+                  🗑️
+                </button>
+              </div>
+            </div>
+
+            <!-- Message -->
+            <p class="text-xs sm:text-sm text-slate-600 mb-2">{{ alerte.message }}</p>
+
+            <!-- Footer -->
+            <div class="flex items-center justify-between mt-2">
+              <span class="text-[9px] sm:text-xs text-slate-400">{{ alerte.createdAt | relativeTime }}</span>
+              @if (alerte.lienUrl && alerte.lienLabel) {
+                <a
+                  [attr.href]="(typeof alerte.lienUrl === 'string' && (alerte.lienUrl.startsWith('http') || alerte.lienUrl.startsWith('//'))) ? alerte.lienUrl : null"
+                  [routerLink]="(typeof alerte.lienUrl === 'string' && (alerte.lienUrl.startsWith('http') || alerte.lienUrl.startsWith('//'))) ? null : alerte.lienUrl"
+                  [attr.target]="(typeof alerte.lienUrl === 'string' && (alerte.lienUrl.startsWith('http') || alerte.lienUrl.startsWith('//'))) ? '_blank' : null"
+                  [attr.rel]="(typeof alerte.lienUrl === 'string' && (alerte.lienUrl.startsWith('http') || alerte.lienUrl.startsWith('//'))) ? 'noopener noreferrer' : null"
+                  class="text-[9px] sm:text-xs font-bold text-primary hover:underline"
+                  (click)="$event.stopPropagation()">
+                  {{ alerte.lienLabel }} →
+                </a>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Version desktop : liste -->
+      <div class="hidden lg:block">
+        @for (alerte of pagination.pagedItems(); track alerte.id) {
+          <div class="border-b border-slate-100 hover:bg-slate-50/70 transition-colors group"
+               [class.bg-blue-50/30]="!alerte.lue"
+               [class.bg-red-50/30]="alerte.priorite === 'CRITIQUE' && !alerte.lue">
+
+            <div class="px-4 lg:px-6 py-3 lg:py-4 flex items-start gap-4">
+
+              <!-- Indicateur non-lu -->
+              @if (!alerte.lue) {
+                <div class="w-1 h-8 rounded-full mt-1.5 flex-shrink-0"
+                     [class.bg-red-500]="alerte.priorite === 'CRITIQUE'"
+                     [class.bg-orange-400]="alerte.priorite === 'HAUTE'"
+                     [class.bg-blue-400]="alerte.priorite === 'NORMALE'"
+                     [class.bg-slate-300]="alerte.priorite === 'INFO'">
+                </div>
+              }
+
+              <!-- Icône -->
+              <div class="w-8 h-8 lg:w-10 lg:h-10 rounded-lg flex items-center justify-center text-sm lg:text-base flex-shrink-0"
+                   [class.bg-red-100]="alerte.type === 'IMPAYÉ' || alerte.type === 'RELANCE'"
+                   [class.bg-amber-100]="alerte.type === 'BUDGET'"
+                   [class.bg-blue-100]="alerte.type === 'REUNION'"
+                   [class.bg-indigo-100]="alerte.type === 'DOCUMENT'"
+                   [class.bg-orange-100]="alerte.type === 'MAINTENANCE'"
+                   [class.bg-teal-100]="alerte.type === 'CHARGE'"
+                   [class.bg-purple-100]="alerte.type === 'VOTE'"
+                   [class.bg-emerald-100]="alerte.type === 'BIENVENUE'"
+                   [class.bg-slate-100]="alerte.type === 'SYSTEME'">
+                <span>{{ typeIcon(alerte.type) }}</span>
+              </div>
+
+              <!-- Contenu principal -->
+              <div class="flex-1 min-w-0 cursor-pointer" (click)="onClickAlerte(alerte)">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                        [class.bg-red-100]="alerte.priorite === 'CRITIQUE'"
+                        [class.text-red-700]="alerte.priorite === 'CRITIQUE'"
+                        [class.bg-orange-100]="alerte.priorite === 'HAUTE'"
+                        [class.text-orange-700]="alerte.priorite === 'HAUTE'"
+                        [class.bg-blue-100]="alerte.priorite === 'NORMALE'"
+                        [class.text-blue-700]="alerte.priorite === 'NORMALE'"
+                        [class.bg-slate-100]="alerte.priorite === 'INFO'"
+                        [class.text-slate-600]="alerte.priorite === 'INFO'">
+                    {{ prioriteIcon(alerte.priorite) }} {{ prioriteLabel(alerte.priorite) }}
+                  </span>
+                  <span class="text-[10px] text-slate-500">{{ typeLabel(alerte.type) }}</span>
+                  @if (!alerte.lue) {
+                    <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">Nouveau</span>
+                  }
+                </div>
+                <h3 class="font-bold text-slate-900 text-sm leading-tight">{{ alerte.titre }}</h3>
+                <p class="text-xs text-slate-600 mt-1 leading-relaxed">{{ alerte.message }}</p>
+                <div class="flex items-center gap-4 mt-2">
+                  <span class="text-[10px] text-slate-400">{{ alerte.createdAt | relativeTime }}</span>
+                  @if (alerte.lienUrl && alerte.lienLabel) {
+                    <a
+                      [attr.href]="(typeof alerte.lienUrl === 'string' && (alerte.lienUrl.startsWith('http') || alerte.lienUrl.startsWith('//'))) ? alerte.lienUrl : null"
+                      [routerLink]="(typeof alerte.lienUrl === 'string' && (alerte.lienUrl.startsWith('http') || alerte.lienUrl.startsWith('//'))) ? null : alerte.lienUrl"
+                      [attr.target]="(typeof alerte.lienUrl === 'string' && (alerte.lienUrl.startsWith('http') || alerte.lienUrl.startsWith('//'))) ? '_blank' : null"
+                      [attr.rel]="(typeof alerte.lienUrl === 'string' && (alerte.lienUrl.startsWith('http') || alerte.lienUrl.startsWith('//'))) ? 'noopener noreferrer' : null"
+                      class="text-[10px] font-bold text-primary hover:underline"
+                      (click)="$event.stopPropagation()">
+                      {{ alerte.lienLabel }} →
+                    </a>
+                  }
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex items-center gap-1">
+                @if (!alerte.lue) {
+                  <button
+                    class="w-6 h-6 lg:w-7 lg:h-7 rounded-lg hover:bg-emerald-50 text-slate-400
+                           hover:text-emerald-600 flex items-center justify-center
+                           transition-colors text-xs lg:text-sm"
+                    type="button"
+                    aria-label="Marquer comme lu"
+                    (click)="marquerLue(alerte); $event.stopPropagation()"
+                    title="Marquer comme lu">
+                    ✓
+                  </button>
+                }
+                <button
+                  class="w-6 h-6 lg:w-7 lg:h-7 rounded-lg hover:bg-red-50 text-slate-400
+                         hover:text-red-500 flex items-center justify-center
+                         transition-colors text-xs lg:text-sm"
+                  type="button"
+                  aria-label="Supprimer"
+                  (click)="supprimer(alerte); $event.stopPropagation()"
+                  title="Supprimer">
+                  🗑️
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Pagination controls -->
+      <div class="mt-4 flex items-center justify-between px-4 sm:px-6 py-4 border-t border-slate-100">
+        <div class="flex items-center gap-3">
+          <label class="text-xs text-slate-500 mr-2">Afficher</label>
+          <select class="text-sm border rounded px-2 py-1" [ngModel]="pagination.pageSize()" (ngModelChange)="setPageSize($event)">
+            <option [ngValue]="5">5</option>
+            <option [ngValue]="10">10</option>
+            <option [ngValue]="20">20</option>
+            <option [ngValue]="50">50</option>
+          </select>
+          <span class="text-xs text-slate-500 ml-2">résultats</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button class="p-2 rounded border disabled:opacity-50" type="button" (click)="setPage(pagination.currentPage() - 1)" [disabled]="pagination.currentPage() <= 1" aria-label="Précédent">
+            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12.293 16.293a1 1 0 0 1-1.414 0L5.586 11l5.293-5.293a1 1 0 0 1 1.414 1.414L8.414 11l3.879 3.879a1 1 0 0 1 0 1.414z" clip-rule="evenodd"/></svg>
+          </button>
+          <span class="text-sm">Page {{ pagination.currentPage() }} / {{ pagination.totalPages() }}</span>
+          <button class="p-2 rounded border disabled:opacity-50" type="button" (click)="setPage(pagination.currentPage() + 1)" [disabled]="pagination.currentPage() >= pagination.totalPages()" aria-label="Suivant">
+            <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M7.707 3.707a1 1 0 0 1 0 1.414L11.586 11l-3.879 3.879a1 1 0 1 1-1.414-1.414L8.586 11 6.293 8.707a1 1 0 0 1 0-1.414z" clip-rule="evenodd"/></svg>
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+</div>

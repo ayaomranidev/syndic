@@ -1,0 +1,120 @@
+<div class="historique-container">
+  <header class="historique-header">
+    <div>
+      <h1>📊 Historique des paiements - Tasnim</h1>
+      <p class="subtitle">Blocs C1 & C2 • Suivi mensuel 2018-2023</p>
+    </div>
+    <div class="header-actions">
+      <label class="btn-excel">
+        📎 Importer Tasnim.xlsx
+        <input type="file" accept=".xlsx,.xls" (change)="importerExcel($event)" hidden />
+      </label>
+      <button class="btn-refresh" (click)="rafraichir()">🔄 Actualiser</button>
+    </div>
+  </header>
+
+  <div class="bloc-selector">
+    <button class="bloc-btn" [class.active]="blocActif() === 'C1'" (click)="changerBloc('C1')">Bloc C1</button>
+    <button class="bloc-btn" [class.active]="blocActif() === 'C2'" (click)="changerBloc('C2')">Bloc C2</button>
+  </div>
+
+  <div class="stats-excel">
+    <div class="stat-item">
+      <span class="stat-label">TOTAL PAYÉ</span>
+      <span class="stat-value stat-green">{{ stats().totalPaye }} TND</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">TOTAL IMPAYÉS</span>
+      <span class="stat-value stat-red">{{ stats().totalImpayes }} TND</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">TAUX RECOUVREMENT</span>
+      <span class="stat-value">{{ stats().tauxRecouvrement }}%</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-label">APPARTEMENTS</span>
+      <span class="stat-value">{{ stats().nbAppartements }}</span>
+    </div>
+  </div>
+
+  <div class="tableau-wrapper">
+    <table class="tableau-excel">
+      <thead>
+        <tr>
+          <th>Étage</th>
+          <th>N° Appart</th>
+          <th>Propriétaire</th>
+          <th>Tél</th>
+          @for (date of datesAffichage(); track date) {
+            <th class="date-col">{{ date | date:'MMM yyyy' }}</th>
+          }
+          <th>Total</th>
+          <th>Ancien loc.</th>
+          <th>Reste à payer</th>
+          <th>Mois retard</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        @for (etage of etages(); track etage) {
+          <tr class="etage-header">
+            <td colspan="2">{{ etage }}</td>
+            <td colspan="2"></td>
+            @for (date of datesAffichage(); track date) { <td></td> }
+            <td></td>
+            <td></td>
+            <td class="etage-total-cell">Reste: {{ resteParEtage()[etage] || 0 }} TND</td>
+            <td></td>
+          </tr>
+
+          @for (app of appartementsParEtage()[etage]; track app.numeroAppart) {
+            <tr [class.impaye]="app.resteAPayer > 0" [class.parking]="app.type === 'parking'">
+              <td>{{ app.etage }}</td>
+              <td class="appart-num"><strong>{{ app.numeroAppart }}</strong></td>
+              <td>{{ app.proprietaire || '—' }}</td>
+              <td>{{ app.telephone || '—' }}</td>
+              @for (date of datesAffichage(); track date) {
+                <td class="paiement-cell">
+                  @if (app.historique[date]) {
+                    <span class="paiement-montant">{{ app.historique[date] }}</span>
+                  } @else {
+                    <span class="paiement-vide">—</span>
+                  }
+                </td>
+              }
+              <td class="total-cell"><strong>{{ app.totalPaye }}</strong></td>
+              <td>{{ app.ancienLocataire || '—' }}</td>
+              <td class="reste-cell">
+                <span [class.text-red]="app.resteAPayer > 0" [class.text-green]="app.resteAPayer === 0">{{ app.resteAPayer }}</span>
+              </td>
+              <td class="retard-cell">
+                @if (app.nbMoisRetard > 0) {
+                  <span class="badge-retard">{{ app.nbMoisRetard }} mois</span>
+                }
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+
+      <tfoot>
+        <tr class="total-row">
+          <td colspan="4"><strong>TOTAUX</strong></td>
+          @for (date of datesAffichage(); track date) {
+            <td class="total-mois">{{ totalParMois()[date] || 0 }}</td>
+          }
+          <td class="total-global">{{ totalGlobal() }} TND</td>
+          <td>—</td>
+          <td class="total-impaye">{{ totalImpayes() }} TND</td>
+          <td>—</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  @if (messageImport()) {
+    <div class="import-message" [class.success]="importReussi()">
+      {{ messageImport() }}
+    </div>
+  }
+</div>

@@ -1,0 +1,1223 @@
+<div class="min-h-screen bg-slate-50 px-4 lg:px-10 py-8">
+
+  <!-- ══════════════ HEADER ══════════════ -->
+  <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+    <div>
+      <p class="text-xs font-bold text-primary uppercase tracking-widest mb-1">
+        Tableau de bord — Finances
+      </p>
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Gestion des Charges</h1>
+      <p class="text-slate-500 text-xs sm:text-sm mt-1">Gérez les charges fixes, travaux et consommations variables</p>
+    </div>
+    <div class="flex items-center gap-2 w-full sm:w-auto">
+      <button
+        class="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 bg-white
+               text-slate-600 hover:bg-slate-50 font-semibold text-xs sm:text-sm
+               transition-colors shadow-sm flex-1 sm:flex-none justify-center"
+        type="button"
+        title="Recharger les charges depuis Firestore"
+        (click)="refreshData()">
+        <span class="hidden xs:inline">↻ Rafraîchir</span>
+        <span class="xs:hidden">↻</span>
+      </button>
+      <button
+        class="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 bg-white
+               text-slate-600 hover:bg-slate-50 font-semibold text-xs sm:text-sm
+               transition-colors shadow-sm flex-1 sm:flex-none justify-center"
+        type="button"
+        routerLink="/charges/repartition">
+        <span class="hidden xs:inline">🔄 Répartition</span>
+        <span class="xs:hidden">🔄</span>
+      </button>
+      <button
+        class="px-3 sm:px-5 py-2 sm:py-2.5 bg-primary hover:bg-primary/90 text-white
+               font-semibold text-xs sm:text-sm rounded-xl shadow-sm
+               transition-all active:scale-95 flex-1 sm:flex-none justify-center whitespace-nowrap"
+        type="button"
+        (click)="openModal()">
+        <span class="hidden xs:inline">+ Nouvelle charge</span>
+        <span class="xs:hidden">+</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ══════════════ KPI CARDS ══════════════ -->
+  <div class="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
+    <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-5">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 sm:mb-2">Total Annuel</p>
+      <p class="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 tabular-nums truncate">{{ formatCurrency(stats().totalAnnual) }}</p>
+      <p class="text-xs text-slate-400 mt-1">{{ stats().count }} charge(s)</p>
+    </div>
+    
+    <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-5">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 sm:mb-2">Charges Fixes</p>
+      <p class="text-xl sm:text-2xl lg:text-3xl font-black text-primary tabular-nums truncate">{{ formatCurrency(stats().fixesTotal) }}</p>
+      <p class="text-xs text-slate-400 mt-1">{{ stats().countByType.FIXE }} charge(s)</p>
+    </div>
+    
+    <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-5">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 sm:mb-2">Travaux</p>
+      <p class="text-xl sm:text-2xl lg:text-3xl font-black text-amber-600 tabular-nums truncate">{{ formatCurrency(stats().travauxTotal) }}</p>
+      <p class="text-xs text-slate-400 mt-1">{{ stats().countByType.TRAVAUX }} intervention(s)</p>
+    </div>
+    
+    <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-5">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 sm:mb-2">Variables</p>
+      <p class="text-xl sm:text-2xl lg:text-3xl font-black text-emerald-600 tabular-nums truncate">{{ formatCurrency(stats().variablesTotal) }}</p>
+      <p class="text-xs text-slate-400 mt-1">{{ stats().countByType.VARIABLE }} consommation(s)</p>
+    </div>
+  </div>
+
+  <!-- ══════════════ NAVIGATION ONGLETS ══════════════ -->
+  <div class="bg-white border border-slate-200 rounded-xl sm:rounded-2xl shadow-sm p-1 sm:px-2 sm:py-2 mb-6
+              flex flex-wrap items-center gap-1 sm:gap-2 overflow-x-auto hide-scrollbar">
+    
+    <button 
+      class="px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap
+             hover:bg-slate-50 active:scale-95 flex-1 sm:flex-none min-w-[80px] sm:min-w-0"
+      [class.bg-primary]="activeTab() === 'TOUS'"
+      [class.text-white]="activeTab() === 'TOUS'"
+      [class.text-slate-600]="activeTab() !== 'TOUS'"
+      (click)="switchTab('TOUS')">
+      <span class="sm:hidden">📊 Tous</span>
+      <span class="hidden sm:inline">📊 Toutes les charges</span>
+    </button>
+    
+    <button 
+      class="px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap
+             hover:bg-slate-50 active:scale-95 flex-1 sm:flex-none min-w-[80px] sm:min-w-0"
+      [class.bg-primary]="activeTab() === 'FIXE'"
+      [class.text-white]="activeTab() === 'FIXE'"
+      [class.text-slate-600]="activeTab() !== 'FIXE'"
+      (click)="switchTab('FIXE')">
+      <span class="sm:hidden">📋 Fixes</span>
+      <span class="hidden sm:inline">📋 Charges fixes</span>
+    </button>
+    
+    <button 
+      class="px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap
+             hover:bg-slate-50 active:scale-95 flex-1 sm:flex-none min-w-[80px] sm:min-w-0"
+      [class.bg-primary]="activeTab() === 'TRAVAUX'"
+      [class.text-white]="activeTab() === 'TRAVAUX'"
+      [class.text-slate-600]="activeTab() !== 'TRAVAUX'"
+      (click)="switchTab('TRAVAUX')">
+      <span class="sm:hidden">🔧 Travaux</span>
+      <span class="hidden sm:inline">🔧 Travaux</span>
+    </button>
+    
+    <button 
+      class="px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-lg sm:rounded-xl text-xs sm:text-sm font-semibold transition-all whitespace-nowrap
+             hover:bg-slate-50 active:scale-95 flex-1 sm:flex-none min-w-[80px] sm:min-w-0"
+      [class.bg-primary]="activeTab() === 'VARIABLE'"
+      [class.text-white]="activeTab() === 'VARIABLE'"
+      [class.text-slate-600]="activeTab() !== 'VARIABLE'"
+      (click)="switchTab('VARIABLE')">
+      <span class="sm:hidden">💧 Variables</span>
+      <span class="hidden sm:inline">💧 Variables</span>
+    </button>
+  </div>
+
+  <!-- ══════════════ FILTRES ══════════════ -->
+  <div class="bg-white border border-slate-200 rounded-xl sm:rounded-2xl shadow-sm px-3 sm:px-4 py-2 sm:py-3 mb-6
+              flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-3">
+    
+    <!-- Recherche -->
+    <div class="flex items-center gap-2 flex-1 min-w-[150px] sm:min-w-[200px]">
+      <span class="text-slate-400 text-sm">🔎</span>
+      <input
+        #searchInput
+        class="flex-1 bg-transparent text-xs sm:text-sm text-slate-700 placeholder-slate-400
+               outline-none border-none focus:ring-0"
+        placeholder="Rechercher..."
+        (input)="onSearch($event)" />
+    </div>
+
+    <div class="h-px sm:w-px sm:h-6 bg-slate-200"></div>
+
+    <!-- Filtre catégorie -->
+    <select
+      #categoryFilter
+      class="text-xs sm:text-sm text-slate-600 border border-slate-200 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2
+             bg-white focus:outline-none focus:ring-2 focus:ring-primary/30
+             focus:border-primary transition-all cursor-pointer w-full sm:w-auto"
+      (change)="onCategoryChange($event)">
+      <option value="">Toutes les catégories</option>
+      <option value="GARDIEN">👮 Gardien</option>
+      <option value="ASCENSEUR">🛗 Ascenseur</option>
+      <option value="EAU">💧 Eau</option>
+      <option value="ELECTRICITE">⚡ Électricité</option>
+      <option value="ASSURANCE">🛡️ Assurance</option>
+      <option value="ENTRETIEN">🧹 Entretien</option>
+      <option value="GAZ">🔥 Gaz</option>
+      <option value="AUTRE">➕ Autre</option>
+    </select>
+
+    <!-- Filtre statut -->
+    <select
+      #statusFilter
+      class="text-xs sm:text-sm text-slate-600 border border-slate-200 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2
+             bg-white focus:outline-none focus:ring-2 focus:ring-primary/30
+             focus:border-primary transition-all cursor-pointer w-full sm:w-auto"
+      (change)="onStatusChange($event)">
+      <option value="">Tous les statuts</option>
+      <option value="ACTIVE">✅ Active</option>
+      <option value="PLANIFIEE">📅 Planifiée</option>
+      <option value="SUSPENDUE">⏸️ Suspendue</option>
+      <option value="TERMINE">✔️ Terminée</option>
+    </select>
+
+    <!-- Bouton reset -->
+    <button
+      class="text-xs text-primary hover:text-primary/80 font-semibold
+             underline underline-offset-2 transition-colors whitespace-nowrap"
+      (click)="resetFilters()">
+      Réinitialiser
+    </button>
+  </div>
+
+  <!-- ══════════════ CONTENU PRINCIPAL ══════════════ -->
+
+  <!-- ==================== VUE TOUS ==================== -->
+  @if (activeTab() === 'TOUS') {
+    <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <!-- Titre -->
+      <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Inventaire des charges</p>
+          <h3 class="text-sm sm:text-base font-bold text-slate-900">{{ filteredCharges().length }} charge(s)</h3>
+        </div>
+        @if (!loading() && filteredCharges().length > 0) {
+          <button class="text-sm text-primary hover:text-primary/80 font-semibold sm:hidden" (click)="openModal()">
+            +
+          </button>
+          <button class="hidden sm:inline text-sm text-primary hover:text-primary/80 font-semibold" (click)="openModal()">
+            + Ajouter
+          </button>
+        }
+      </div>
+
+      @if (loading()) {
+        <div class="px-4 sm:px-6 py-10 sm:py-20 text-center">
+          <div class="flex flex-col items-center">
+            <div class="w-8 h-8 sm:w-10 sm:h-10 border-2 border-primary border-t-transparent rounded-full animate-spin mb-3"></div>
+            <p class="text-sm sm:text-base text-slate-500">Chargement des charges...</p>
+          </div>
+        </div>
+      }
+
+      @if (!filteredCharges().length && !loading()) {
+        <div class="px-4 sm:px-6 py-10 sm:py-20 text-center">
+          <div class="flex flex-col items-center">
+            <span class="text-4xl sm:text-5xl mb-4">📋</span>
+            <p class="text-base sm:text-lg text-slate-700 font-semibold">Aucune charge pour le moment</p>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1">Créez votre première charge pour commencer</p>
+            <button class="mt-4 px-4 sm:px-5 py-2 sm:py-2.5 bg-primary text-white rounded-xl font-semibold text-xs sm:text-sm"
+                    (click)="openModal()">
+              + Créer une charge
+            </button>
+          </div>
+        </div>
+      }
+
+      <!-- Grille des charges - VUE TOUS -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 p-3 sm:p-6">
+        @for (charge of filteredCharges(); track charge.id) {
+          <div class="border border-slate-200 rounded-lg sm:rounded-xl hover:shadow-md transition-all
+                      bg-white overflow-hidden group">
+            
+            <!-- En-tête avec badge de type -->
+            <div class="px-3 sm:px-4 py-2 sm:py-3 border-b border-slate-100 flex items-center justify-between
+                        bg-gradient-to-r from-slate-50 to-white">
+              <div class="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                <span class="text-base sm:text-lg flex-shrink-0">
+                  @if (charge.type_charge === 'FIXE') { 📋 }
+                  @else if (charge.type_charge === 'TRAVAUX') { 🔧 }
+                  @else { 💧 }
+                </span>
+                <span class="text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full truncate max-w-[70px] sm:max-w-none"
+                      [class.bg-primary/10]="charge.type_charge === 'FIXE'"
+                      [class.text-primary]="charge.type_charge === 'FIXE'"
+                      [class.bg-amber-50]="charge.type_charge === 'TRAVAUX'"
+                      [class.text-amber-700]="charge.type_charge === 'TRAVAUX'"
+                      [class.bg-emerald-50]="charge.type_charge === 'VARIABLE'"
+                      [class.text-emerald-700]="charge.type_charge === 'VARIABLE'">
+                  @if (charge.type_charge === 'FIXE') { Fixe }
+                  @else if (charge.type_charge === 'TRAVAUX') { Travaux }
+                  @else { Variable }
+                </span>
+              </div>
+              <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                <button class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg hover:bg-primary/10 text-slate-400
+                               hover:text-primary flex items-center justify-center text-xs sm:text-sm"
+                        (click)="edit(charge)" title="Modifier">
+                  ✏️
+                </button>
+                <button class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg hover:bg-emerald-50 text-slate-400
+                               hover:text-emerald-600 flex items-center justify-center text-xs sm:text-sm"
+                        [disabled]="generatingDettesId() === charge.id"
+                        (click)="regenererDettes(charge)"
+                        title="Générer / compléter les dettes manquantes">
+                  @if (generatingDettesId() === charge.id) { ⏳ } @else { 💳 }
+                </button>
+                <button class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg hover:bg-red-50 text-slate-400
+                               hover:text-red-500 flex items-center justify-center text-xs sm:text-sm"
+                        (click)="remove(charge)" title="Supprimer">
+                  🗑️
+                </button>
+              </div>
+            </div>
+
+            <!-- Corps -->
+            <div class="p-3 sm:p-4">
+              <h4 class="font-bold text-slate-900 text-base sm:text-lg mb-1 truncate">{{ charge.libelle }}</h4>
+              <p class="text-xs text-slate-400 mb-2 sm:mb-3 truncate">{{ charge.rangeLabel || 'Période non définie' }}</p>
+              
+              @if (charge.description) {
+                <p class="text-xs sm:text-sm text-slate-600 mb-2 sm:mb-3 line-clamp-2">{{ charge.description }}</p>
+              }
+
+              <!-- Montant -->
+              <div class="mb-2 sm:mb-3">
+                <span class="text-xl sm:text-2xl font-black text-slate-900">{{ formatCurrency(charge.montant) }}</span>
+                <span class="text-xs text-slate-400 ml-1">
+                  @if (charge.type_charge === 'FIXE') { /mois }
+                  @else if (charge.type_charge === 'TRAVAUX') { (total) }
+                  @else { 
+                    @if (charge.consommation_totale && charge.prix_unitaire) {
+                      ({{ charge.consommation_totale }} {{ charge.unite_montant || 'unités' }})
+                    }
+                  }
+                </span>
+              </div>
+
+              <!-- Badges -->
+              <div class="flex flex-wrap gap-1 mb-2 sm:mb-3">
+                <span class="text-[10px] font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-slate-100 text-slate-600 truncate max-w-[90px] sm:max-w-[120px]">
+                  {{ CHARGE_CATEGORIES[charge.categorie] }}
+                </span>
+                <span class="text-[10px] font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full"
+                      [class.bg-emerald-50]="charge.statut === 'ACTIVE'"
+                      [class.text-emerald-700]="charge.statut === 'ACTIVE'"
+                      [class.bg-amber-50]="charge.statut === 'PLANIFIEE'"
+                      [class.text-amber-700]="charge.statut === 'PLANIFIEE'"
+                      [class.bg-blue-50]="charge.statut === 'TERMINE'"
+                      [class.text-blue-700]="charge.statut === 'TERMINE'"
+                      [class.bg-slate-50]="charge.statut === 'SUSPENDUE'"
+                      [class.text-slate-700]="charge.statut === 'SUSPENDUE'">
+                  {{ STATUT_LABELS[charge.statut] }}
+                </span>
+                @if (charge.scope !== 'all') {
+                  <span class="text-[10px] font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full truncate max-w-[70px] sm:max-w-[100px]"
+                        [class.bg-purple-50]="charge.scope !== 'parking' && charge.scope !== 'ascenseur'"
+                        [class.text-purple-700]="charge.scope !== 'parking' && charge.scope !== 'ascenseur'"
+                        [class.bg-blue-50]="charge.scope === 'parking'"
+                        [class.text-blue-700]="charge.scope === 'parking'"
+                        [class.bg-indigo-50]="charge.scope === 'ascenseur'"
+                        [class.text-indigo-700]="charge.scope === 'ascenseur'"
+                        [title]="charge.scope === 'building' ? 'Bâtiment spécifique' : charge.scope === 'parking' ? 'Parking uniquement' : charge.scope === 'ascenseur' ? 'Ascenseur uniquement' : 'Appartements sélectionnés'">
+                    @if (charge.scope === 'building') { 🏢 Bâtiment }
+                    @else if (charge.scope === 'parking') { 🅿️ Parking }
+                    @else if (charge.scope === 'ascenseur') { 🛗 Ascenseur }
+                    @else { 🏠 Sélection }
+                  </span>
+                }
+              </div>
+
+              <!-- Détails spécifiques -->
+              @if (charge.type_charge === 'FIXE' && charge.fournisseur) {
+                <div class="text-xs text-slate-500 border-t border-slate-100 pt-2 mt-2 truncate">
+                  <span class="font-medium">Fournisseur:</span> {{ charge.fournisseur }}
+                </div>
+              }
+              
+              @if (charge.type_charge === 'TRAVAUX') {
+                <div class="text-xs text-slate-500 border-t border-slate-100 pt-2 mt-2">
+                  @if (charge.urgence) {
+                    <span class="font-medium">Urgence:</span>
+                    <span class="ml-1"
+                          [class.text-red-600]="charge.urgence === 'CRITIQUE'"
+                          [class.text-orange-600]="charge.urgence === 'HAUTE'"
+                          [class.text-amber-600]="charge.urgence === 'MOYENNE'"
+                          [class.text-green-600]="charge.urgence === 'BASSE'">
+                      {{ URGENCE_LABELS[charge.urgence] }}
+                    </span>
+                  }
+                </div>
+              }
+
+              @if (charge.type_charge === 'VARIABLE') {
+                <div class="text-xs text-slate-500 border-t border-slate-100 pt-2 mt-2 truncate">
+                  @if (charge.index_debut !== undefined && charge.index_fin !== undefined) {
+                    <span class="font-medium">Index:</span> {{ charge.index_debut }} → {{ charge.index_fin }}
+                  }
+                  @if (charge.fournisseur) {
+                    <span class="ml-2 font-medium">Four.</span> {{ charge.fournisseur }}
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ==================== CHARGES FIXES ==================== -->
+  @if (activeTab() === 'FIXE') {
+    <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Charges fixes</p>
+          <h3 class="text-sm sm:text-base font-bold text-slate-900">{{ filteredChargesFixes().length }} charge(s)</h3>
+        </div>
+        <button class="text-sm text-primary hover:text-primary/80 font-semibold" (click)="openModalWithType('FIXE')">
+          + Ajouter
+        </button>
+      </div>
+
+      @if (loading()) {
+        <div class="px-4 sm:px-6 py-10 sm:py-20 text-center">
+          <div class="flex flex-col items-center">
+            <div class="w-8 h-8 sm:w-10 sm:h-10 border-2 border-primary border-t-transparent rounded-full animate-spin mb-3"></div>
+            <p class="text-sm sm:text-base text-slate-500">Chargement...</p>
+          </div>
+        </div>
+      }
+
+      @if (!filteredChargesFixes().length && !loading()) {
+        <div class="px-4 sm:px-6 py-10 sm:py-20 text-center">
+          <div class="flex flex-col items-center">
+            <span class="text-4xl sm:text-5xl mb-4">📋</span>
+            <p class="text-base sm:text-lg text-slate-700 font-semibold">Aucune charge fixe</p>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1">Créez votre première charge fixe</p>
+          </div>
+        </div>
+      }
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 p-3 sm:p-6">
+        @for (charge of filteredChargesFixes(); track charge.id) {
+          <div class="border border-slate-200 rounded-lg sm:rounded-xl hover:shadow-md transition-all bg-white overflow-hidden group">
+            <div class="px-3 sm:px-4 py-2 sm:py-3 border-b border-slate-100 flex items-center justify-between">
+              <div class="flex items-center gap-1.5 sm:gap-2">
+                <span class="text-base sm:text-lg">📋</span>
+                <span class="text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-primary/10 text-primary">Fixe</span>
+              </div>
+              <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg hover:bg-primary/10 text-slate-400 hover:text-primary" 
+                        (click)="edit(charge)" title="Modifier">✏️</button>
+                <button class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500" 
+                        (click)="remove(charge)" title="Supprimer">🗑️</button>
+              </div>
+            </div>
+            
+            <div class="p-3 sm:p-4">
+              <h4 class="font-bold text-slate-900 text-base sm:text-lg mb-1 truncate">{{ charge.libelle }}</h4>
+              <p class="text-xs text-slate-400 mb-2 sm:mb-3 truncate">{{ charge.rangeLabel || 'Période non définie' }}</p>
+              
+              <div class="mb-2 sm:mb-3">
+                <span class="text-xl sm:text-2xl font-black text-slate-900">{{ formatCurrency(charge.montant) }}</span>
+                <span class="text-xs text-slate-400 ml-1">/mois</span>
+              </div>
+
+              <div class="flex flex-wrap gap-1 mb-2 sm:mb-3">
+                <span class="text-[10px] font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-slate-100 text-slate-600 truncate max-w-[90px] sm:max-w-[120px]">
+                  {{ CHARGE_CATEGORIES[charge.categorie] }}
+                </span>
+                @if (charge.fournisseur) {
+                  <span class="text-[10px] font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-blue-50 text-blue-700 truncate max-w-[90px] sm:max-w-[120px]">
+                    {{ charge.fournisseur }}
+                  </span>
+                }
+              </div>
+
+              @if (charge.notes) {
+                <p class="text-xs text-slate-500 border-t border-slate-100 pt-2 mt-2 truncate">{{ charge.notes }}</p>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ==================== TRAVAUX ==================== -->
+  @if (activeTab() === 'TRAVAUX') {
+    <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Travaux & interventions</p>
+          <h3 class="text-sm sm:text-base font-bold text-slate-900">{{ filteredTravaux().length }} travaux</h3>
+        </div>
+        <button class="text-sm text-primary hover:text-primary/80 font-semibold" (click)="openModalWithType('TRAVAUX')">
+          + Ajouter
+        </button>
+      </div>
+
+      @if (loading()) {
+        <div class="px-4 sm:px-6 py-10 sm:py-20 text-center">
+          <div class="flex flex-col items-center">
+            <div class="w-8 h-8 sm:w-10 sm:h-10 border-2 border-primary border-t-transparent rounded-full animate-spin mb-3"></div>
+            <p class="text-sm sm:text-base text-slate-500">Chargement...</p>
+          </div>
+        </div>
+      }
+
+      @if (!filteredTravaux().length && !loading()) {
+        <div class="px-4 sm:px-6 py-10 sm:py-20 text-center">
+          <div class="flex flex-col items-center">
+            <span class="text-4xl sm:text-5xl mb-4">🔧</span>
+            <p class="text-base sm:text-lg text-slate-700 font-semibold">Aucun travail</p>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1">Ajoutez vos premiers travaux</p>
+          </div>
+        </div>
+      }
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 p-3 sm:p-6">
+        @for (charge of filteredTravaux(); track charge.id) {
+          <div class="border border-slate-200 rounded-lg sm:rounded-xl hover:shadow-md transition-all bg-white overflow-hidden group">
+            <div class="px-3 sm:px-4 py-2 sm:py-3 border-b border-slate-100 flex items-center justify-between">
+              <div class="flex items-center gap-1.5 sm:gap-2">
+                <span class="text-base sm:text-lg">🔧</span>
+                <span class="text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-amber-50 text-amber-700">Travaux</span>
+              </div>
+              <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg hover:bg-primary/10 text-slate-400 hover:text-primary" 
+                        (click)="edit(charge)" title="Modifier">✏️</button>
+                <button class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500" 
+                        (click)="remove(charge)" title="Supprimer">🗑️</button>
+              </div>
+            </div>
+            
+            <div class="p-3 sm:p-4">
+              <h4 class="font-bold text-slate-900 text-base sm:text-lg mb-1 truncate">{{ charge.libelle }}</h4>
+              <p class="text-xs text-slate-400 mb-2 sm:mb-3 truncate">{{ charge.rangeLabel || 'Période non définie' }}</p>
+              
+              <div class="mb-2 sm:mb-3">
+                <span class="text-xl sm:text-2xl font-black text-slate-900">{{ formatCurrency(charge.montant) }}</span>
+              </div>
+
+              <div class="flex flex-wrap gap-1 mb-2 sm:mb-3">
+                <span class="text-[10px] font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-slate-100 text-slate-600 truncate max-w-[90px] sm:max-w-[120px]">
+                  {{ CHARGE_CATEGORIES[charge.categorie] }}
+                </span>
+                @if (charge.urgence) {
+                  <span class="text-[10px] font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full"
+                        [class.bg-red-50]="charge.urgence === 'CRITIQUE'"
+                        [class.text-red-700]="charge.urgence === 'CRITIQUE'"
+                        [class.bg-orange-50]="charge.urgence === 'HAUTE'"
+                        [class.text-orange-700]="charge.urgence === 'HAUTE'"
+                        [class.bg-yellow-50]="charge.urgence === 'MOYENNE'"
+                        [class.text-yellow-700]="charge.urgence === 'MOYENNE'"
+                        [class.bg-green-50]="charge.urgence === 'BASSE'"
+                        [class.text-green-700]="charge.urgence === 'BASSE'">
+                    {{ URGENCE_LABELS[charge.urgence] }}
+                  </span>
+                }
+              </div>
+
+              @if (charge.intervenant) {
+                <p class="text-xs text-slate-500 border-t border-slate-100 pt-2 mt-2 truncate">
+                  <span class="font-medium">Intervenant:</span> {{ charge.intervenant }}
+                </p>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ==================== CHARGES VARIABLES ==================== -->
+  @if (activeTab() === 'VARIABLE') {
+    <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-500 font-semibold uppercase tracking-wider">Charges variables</p>
+          <h3 class="text-sm sm:text-base font-bold text-slate-900">{{ filteredChargesVariables().length }} consommation(s)</h3>
+        </div>
+        <button class="text-sm text-primary hover:text-primary/80 font-semibold" (click)="openModalWithType('VARIABLE')">
+          + Ajouter
+        </button>
+      </div>
+
+      @if (loading()) {
+        <div class="px-4 sm:px-6 py-10 sm:py-20 text-center">
+          <div class="flex flex-col items-center">
+            <div class="w-8 h-8 sm:w-10 sm:h-10 border-2 border-primary border-t-transparent rounded-full animate-spin mb-3"></div>
+            <p class="text-sm sm:text-base text-slate-500">Chargement...</p>
+          </div>
+        </div>
+      }
+
+      @if (!filteredChargesVariables().length && !loading()) {
+        <div class="px-4 sm:px-6 py-10 sm:py-20 text-center">
+          <div class="flex flex-col items-center">
+            <span class="text-4xl sm:text-5xl mb-4">💧</span>
+            <p class="text-base sm:text-lg text-slate-700 font-semibold">Aucune consommation</p>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1">Ajoutez vos premières charges variables</p>
+          </div>
+        </div>
+      }
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 p-3 sm:p-6">
+        @for (charge of filteredChargesVariables(); track charge.id) {
+          <div class="border border-slate-200 rounded-lg sm:rounded-xl hover:shadow-md transition-all bg-white overflow-hidden group">
+            <div class="px-3 sm:px-4 py-2 sm:py-3 border-b border-slate-100 flex items-center justify-between">
+              <div class="flex items-center gap-1.5 sm:gap-2">
+                <span class="text-base sm:text-lg">💧</span>
+                <span class="text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-emerald-50 text-emerald-700">Variable</span>
+              </div>
+              <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg hover:bg-primary/10 text-slate-400 hover:text-primary" 
+                        (click)="edit(charge)" title="Modifier">✏️</button>
+                <button class="w-6 h-6 sm:w-7 sm:h-7 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500" 
+                        (click)="remove(charge)" title="Supprimer">🗑️</button>
+              </div>
+            </div>
+            
+            <div class="p-3 sm:p-4">
+              <h4 class="font-bold text-slate-900 text-base sm:text-lg mb-1 truncate">{{ charge.libelle }}</h4>
+              <p class="text-xs text-slate-400 mb-2 sm:mb-3 truncate">{{ charge.periode_releve || charge.rangeLabel || 'Période non définie' }}</p>
+              
+              <div class="mb-2 sm:mb-3">
+                <span class="text-xl sm:text-2xl font-black text-slate-900">
+                  {{ formatCurrency(charge.consommation_totale && charge.prix_unitaire ? 
+                     (charge.consommation_totale * charge.prix_unitaire) : charge.montant) }}
+                </span>
+                @if (charge.consommation_totale) {
+                  <span class="text-xs text-slate-400 ml-1">({{ charge.consommation_totale }} {{ charge.unite_montant || 'unités' }})</span>
+                }
+              </div>
+
+              <div class="flex flex-wrap gap-1 mb-2 sm:mb-3">
+                <span class="text-[10px] font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-slate-100 text-slate-600 truncate max-w-[90px] sm:max-w-[120px]">
+                  {{ CHARGE_CATEGORIES[charge.categorie] }}
+                </span>
+                @if (charge.fournisseur) {
+                  <span class="text-[10px] font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full bg-blue-50 text-blue-700 truncate max-w-[90px] sm:max-w-[120px]">
+                    {{ charge.fournisseur }}
+                  </span>
+                }
+              </div>
+
+              @if (charge.index_debut !== undefined && charge.index_fin !== undefined) {
+                <p class="text-xs text-slate-500 border-t border-slate-100 pt-2 mt-2 truncate">
+                  Index: {{ charge.index_debut }} → {{ charge.index_fin }}
+                </p>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ══════════════ MODAL ══════════════ -->
+  @if (showModal()) {
+    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50
+                flex items-center justify-center p-2 sm:p-4"
+         (click)="closeModal()" role="presentation">
+
+      <div class="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh]
+                  overflow-y-auto flex flex-col m-2 sm:m-0"
+           role="dialog" aria-modal="true"
+           (click)="$event.stopPropagation()">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-5 border-b border-slate-100 flex-shrink-0">
+          <div>
+            <p class="text-xs font-bold text-primary uppercase tracking-widest">
+              @if (form.get('type_charge')?.value === 'FIXE') { Charge fixe }
+              @else if (form.get('type_charge')?.value === 'TRAVAUX') { Travaux }
+              @else { Charge variable }
+            </p>
+            <h3 class="text-lg sm:text-xl font-bold text-slate-900 mt-0.5">
+              {{ editingId() ? 'Modifier' : 'Nouvelle' }}
+              @if (form.get('type_charge')?.value === 'FIXE') { charge fixe }
+              @else if (form.get('type_charge')?.value === 'TRAVAUX') { travaux }
+              @else { consommation }
+            </h3>
+          </div>
+          <button
+            class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-slate-100 hover:bg-slate-200
+                   text-slate-500 font-bold text-base sm:text-lg flex items-center justify-center
+                   transition-colors"
+            type="button" aria-label="Fermer" (click)="closeModal()">
+            ✕
+          </button>
+        </div>
+
+        <!-- Form -->
+        <form class="p-4 sm:p-6 flex flex-col gap-4 sm:gap-5" [formGroup]="form" (ngSubmit)="save()">
+
+          <!-- Type de charge -->
+          <div class="grid grid-cols-3 gap-2 sm:gap-3">
+            <label class="flex items-center gap-1 sm:gap-2 p-2 sm:p-3 border rounded-lg sm:rounded-xl cursor-pointer
+                          hover:bg-slate-50 transition-colors"
+                   [class.border-primary]="form.get('type_charge')?.value === 'FIXE'"
+                   [class.bg-primary/5]="form.get('type_charge')?.value === 'FIXE'">
+              <input type="radio" formControlName="type_charge" value="FIXE" class="hidden">
+              <span class="text-base sm:text-lg">📋</span>
+              <span class="text-xs sm:text-sm font-medium">Fixe</span>
+            </label>
+            
+            <label class="flex items-center gap-1 sm:gap-2 p-2 sm:p-3 border rounded-lg sm:rounded-xl cursor-pointer
+                          hover:bg-slate-50 transition-colors"
+                   [class.border-primary]="form.get('type_charge')?.value === 'TRAVAUX'"
+                   [class.bg-primary/5]="form.get('type_charge')?.value === 'TRAVAUX'">
+              <input type="radio" formControlName="type_charge" value="TRAVAUX" class="hidden">
+              <span class="text-base sm:text-lg">🔧</span>
+              <span class="text-xs sm:text-sm font-medium">Travaux</span>
+            </label>
+            
+            <label class="flex items-center gap-1 sm:gap-2 p-2 sm:p-3 border rounded-lg sm:rounded-xl cursor-pointer
+                          hover:bg-slate-50 transition-colors"
+                   [class.border-primary]="form.get('type_charge')?.value === 'VARIABLE'"
+                   [class.bg-primary/5]="form.get('type_charge')?.value === 'VARIABLE'">
+              <input type="radio" formControlName="type_charge" value="VARIABLE" class="hidden">
+              <span class="text-base sm:text-lg">💧</span>
+              <span class="text-xs sm:text-sm font-medium">Variable</span>
+            </label>
+          </div>
+
+          <!-- Champs communs -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <label class="flex flex-col gap-1 sm:gap-1.5">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Libellé *</span>
+              <input
+                class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                       focus:outline-none focus:ring-2 focus:ring-primary/30
+                       focus:border-primary transition-all"
+                formControlName="libelle"
+                placeholder="Ex: Gardien, Ascenseur..." />
+              @if (form.get('libelle')?.invalid && (form.get('libelle')?.touched || form.touched)) {
+                <p class="text-rose-600 text-xs mt-1">
+                  @if (form.get('libelle')?.errors?.['required']) { Le libellé est requis. }
+                  @else if (form.get('libelle')?.errors?.['minlength']) { Le libellé doit contenir au moins 3 caractères. }
+                </p>
+              }
+            </label>
+
+            <label class="flex flex-col gap-1 sm:gap-1.5">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Montant *</span>
+              <input
+                class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                       focus:outline-none focus:ring-2 focus:ring-primary/30
+                       focus:border-primary transition-all"
+                type="number"
+                formControlName="montant"
+                min="0"
+                step="0.01"
+                placeholder="0.00" />
+              @if (form.get('montant')?.invalid && (form.get('montant')?.touched || form.touched)) {
+                <p class="text-rose-600 text-xs mt-1">
+                  @if (form.get('montant')?.errors?.['required']) { Le montant est requis. }
+                  @else if (form.get('montant')?.errors?.['min']) { Le montant doit être supérieur ou égal à 0. }
+                </p>
+              }
+            </label>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <label class="flex flex-col gap-1 sm:gap-1.5">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Date début *</span>
+              <input
+                class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                       focus:outline-none focus:ring-2 focus:ring-primary/30
+                       focus:border-primary transition-all"
+                type="date"
+                formControlName="date_debut" />
+            </label>
+
+            <label class="flex flex-col gap-1 sm:gap-1.5">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Date fin</span>
+              <input
+                class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                       focus:outline-none focus:ring-2 focus:ring-primary/30
+                       focus:border-primary transition-all"
+                type="date"
+                formControlName="date_fin" />
+              @if (form.get('date_debut')?.value && form.get('date_fin')?.value && form.get('date_debut')?.touched && form.get('date_fin')?.touched) {
+                @if (formError()) {
+                  <p class="text-rose-600 text-xs mt-1">{{ formError() }}</p>
+                }
+              }
+            </label>
+          </div>
+
+          <label class="flex flex-col gap-1 sm:gap-1.5">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Description</span>
+            <textarea
+              class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                     focus:outline-none focus:ring-2 focus:ring-primary/30
+                     focus:border-primary transition-all"
+              formControlName="description"
+              rows="2"
+              placeholder="Description détaillée..."></textarea>
+          </label>
+
+          <div class="grid grid-cols-2 gap-3 sm:gap-4">
+            <label class="flex flex-col gap-1 sm:gap-1.5">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Catégorie</span>
+              <select
+                class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                       focus:outline-none focus:ring-2 focus:ring-primary/30
+                       focus:border-primary transition-all bg-white"
+                formControlName="categorie">
+                @if (form.get('type_charge')?.value === 'FIXE') {
+                  <option value="GARDIEN">👮 Gardien</option>
+                  <option value="ASCENSEUR">🛗 Ascenseur</option>
+                  <option value="ASSURANCE">🛡️ Assurance</option>
+                  <option value="ENTRETIEN">🧹 Entretien</option>
+                } @else if (form.get('type_charge')?.value === 'TRAVAUX') {
+                  <option value="ASCENSEUR">🛗 Ascenseur</option>
+                  <option value="ENTRETIEN">🔧 Entretien</option>
+                } @else {
+                  <option value="EAU">💧 Eau</option>
+                  <option value="ELECTRICITE">⚡ Électricité</option>
+                  <option value="GAZ">🔥 Gaz</option>
+                }
+                <option value="AUTRE">➕ Autre</option>
+              </select>
+            </label>
+
+            <label class="flex flex-col gap-1 sm:gap-1.5">
+              <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Statut</span>
+              <select
+                class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                       focus:outline-none focus:ring-2 focus:ring-primary/30
+                       focus:border-primary transition-all bg-white"
+                formControlName="statut">
+                <option value="ACTIVE">✅ Active</option>
+                <option value="PLANIFIEE">📅 Planifiée</option>
+                <option value="SUSPENDUE">⏸️ Suspendue</option>
+                <option value="TERMINE">✔️ Terminée</option>
+              </select>
+            </label>
+          </div>
+
+          <!-- ===== CHAMPS SPÉCIFIQUES FIXES ===== -->
+          @if (form.get('type_charge')?.value === 'FIXE') {
+            <div class="border-t border-slate-100 pt-3 sm:pt-4">
+              <h4 class="text-sm font-bold text-slate-700 mb-2 sm:mb-3">Informations contrat</h4>
+              
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <label class="flex flex-col gap-1 sm:gap-1.5">
+                  <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Fournisseur</span>
+                  <input
+                    class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                           focus:outline-none focus:ring-2 focus:ring-primary/30
+                           focus:border-primary transition-all"
+                    formControlName="fournisseur"
+                    placeholder="Nom du fournisseur" />
+                </label>
+
+                <label class="flex flex-col gap-1 sm:gap-1.5">
+                  <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">N° Contrat</span>
+                  <input
+                    class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                           focus:outline-none focus:ring-2 focus:ring-primary/30
+                           focus:border-primary transition-all"
+                    formControlName="contrat_id"
+                    placeholder="CONT-001" />
+                </label>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-3">
+                <label class="flex flex-col gap-1 sm:gap-1.5">
+                  <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Renouvellement</span>
+                  <input
+                    class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                           focus:outline-none focus:ring-2 focus:ring-primary/30
+                           focus:border-primary transition-all"
+                    type="date"
+                    formControlName="date_prochain_renouvellement" />
+                </label>
+
+                <label class="flex flex-col gap-1 sm:gap-1.5">
+                  <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Fréquence</span>
+                  <select
+                    class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                           focus:outline-none focus:ring-2 focus:ring-primary/30
+                           focus:border-primary transition-all bg-white"
+                    formControlName="frequence">
+                    <option value="MENSUELLE">📅 Mensuelle</option>
+                    <option value="TRIMESTRIELLE">📆 Trimestrielle</option>
+                    <option value="ANNUELLE">🗓️ Annuelle</option>
+                  </select>
+                </label>
+              </div>
+
+              <label class="flex items-center gap-2 sm:gap-3 cursor-pointer select-none mt-2 sm:mt-3">
+                <input
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded border-slate-300 accent-primary
+                         focus:ring-primary/30"
+                  type="checkbox"
+                  formControlName="reconduction_auto" />
+                <span class="text-xs sm:text-sm text-slate-700 font-medium">Reconduction automatique</span>
+              </label>
+            </div>
+          }
+
+          <!-- ===== CHAMPS SPÉCIFIQUES TRAVAUX ===== -->
+          @if (form.get('type_charge')?.value === 'TRAVAUX') {
+            <div class="border-t border-slate-100 pt-3 sm:pt-4">
+              <h4 class="text-sm font-bold text-slate-700 mb-2 sm:mb-3">Détails des travaux</h4>
+              
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <label class="flex flex-col gap-1 sm:gap-1.5">
+                  <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Date panne</span>
+                  <input
+                    class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                           focus:outline-none focus:ring-2 focus:ring-primary/30
+                           focus:border-primary transition-all"
+                    type="date"
+                    formControlName="date_panne" />
+                </label>
+
+                <label class="flex flex-col gap-1 sm:gap-1.5">
+                  <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Urgence</span>
+                  <select
+                    class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                           focus:outline-none focus:ring-2 focus:ring-primary/30
+                           focus:border-primary transition-all bg-white"
+                    formControlName="urgence">
+                    <option value="BASSE">🟢 Basse</option>
+                    <option value="MOYENNE">🟡 Moyenne</option>
+                    <option value="HAUTE">🟠 Haute</option>
+                    <option value="CRITIQUE">🔴 Critique</option>
+                  </select>
+                </label>
+              </div>
+
+              <label class="flex flex-col gap-1 sm:gap-1.5 mt-3">
+                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Intervenant</span>
+                <input
+                  class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                         focus:outline-none focus:ring-2 focus:ring-primary/30
+                         focus:border-primary transition-all"
+                  formControlName="intervenant"
+                  placeholder="Nom de l'entreprise" />
+              </label>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-3">
+                <label class="flex flex-col gap-1 sm:gap-1.5">
+                  <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">N° Devis</span>
+                  <input
+                    class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                           focus:outline-none focus:ring-2 focus:ring-primary/30
+                           focus:border-primary transition-all"
+                    formControlName="devis_id"
+                    placeholder="DEV-001" />
+                </label>
+
+                <label class="flex flex-col gap-1 sm:gap-1.5">
+                  <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">N° Facture</span>
+                  <input
+                    class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                           focus:outline-none focus:ring-2 focus:ring-primary/30
+                           focus:border-primary transition-all"
+                    formControlName="facture_id"
+                    placeholder="FAC-001" />
+                </label>
+              </div>
+            </div>
+          }
+
+          <!-- ===== CHAMPS SPÉCIFIQUES VARIABLES ===== -->
+          @if (form.get('type_charge')?.value === 'VARIABLE') {
+            <div class="border-t border-slate-100 pt-3 sm:pt-4">
+              <h4 class="text-sm font-bold text-slate-700 mb-2 sm:mb-3">Informations consommation</h4>
+              
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <label class="flex flex-col gap-1 sm:gap-1.5">
+                  <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Période</span>
+                  <input
+                    class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                           focus:outline-none focus:ring-2 focus:ring-primary/30
+                           focus:border-primary transition-all"
+                    formControlName="periode_releve"
+                    placeholder="Janvier 2025" />
+                </label>
+
+                <label class="flex flex-col gap-1 sm:gap-1.5">
+                  <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Fournisseur</span>
+                  <select
+                    class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                           focus:outline-none focus:ring-2 focus:ring-primary/30
+                           focus:border-primary transition-all bg-white"
+                    formControlName="fournisseur">
+                    <option value="">Sélectionner</option>
+                    <option value="SONEDE">💧 SONEDE</option>
+                    <option value="STEG">⚡ STEG</option>
+                    <option value="AUTRE">➕ Autre</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-3">
+                <label class="flex flex-col gap-1 sm:gap-1.5">
+                  <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Index début</span>
+                  <input
+                    class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                           focus:outline-none focus:ring-2 focus:ring-primary/30
+                           focus:border-primary transition-all"
+                    type="number"
+                    formControlName="index_debut"
+                    min="0"
+                    step="0.01" />
+                </label>
+
+                <label class="flex flex-col gap-1 sm:gap-1.5">
+                  <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Index fin</span>
+                  <input
+                    class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                           focus:outline-none focus:ring-2 focus:ring-primary/30
+                           focus:border-primary transition-all"
+                    type="number"
+                    formControlName="index_fin"
+                    min="0"
+                    step="0.01" />
+                </label>
+
+                <label class="flex flex-col gap-1 sm:gap-1.5">
+                  <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Prix unitaire</span>
+                  <input
+                    class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                           focus:outline-none focus:ring-2 focus:ring-primary/30
+                           focus:border-primary transition-all"
+                    type="number"
+                    formControlName="prix_unitaire"
+                    min="0"
+                    step="0.001"
+                    placeholder="0.000" />
+                </label>
+              </div>
+            </div>
+          }
+
+          <!-- Portée de la charge -->
+          <div class="border-t border-slate-100 pt-3 sm:pt-4">
+            <h4 class="text-sm font-bold text-slate-700 mb-2 sm:mb-3">Portée de la charge</h4>
+            
+            <div class="grid grid-cols-5 gap-2 sm:gap-3 mb-3 sm:mb-4">
+              <label class="flex items-center justify-center gap-1 sm:gap-2 p-1.5 sm:p-2 border rounded-lg cursor-pointer
+                            hover:bg-slate-50 transition-colors text-xs sm:text-sm"
+                     [class.border-primary]="form.get('scope')?.value === 'all'">
+                <input type="radio" formControlName="scope" value="all" class="hidden">
+                <span>🌍 Tous</span>
+              </label>
+              
+              <label class="flex items-center justify-center gap-1 sm:gap-2 p-1.5 sm:p-2 border rounded-lg cursor-pointer
+                            hover:bg-slate-50 transition-colors text-xs sm:text-sm"
+                     [class.border-primary]="form.get('scope')?.value === 'building'">
+                <input type="radio" formControlName="scope" value="building" class="hidden">
+                <span>🏢 Bâtiments</span>
+              </label>
+              
+              <label class="flex items-center justify-center gap-1 sm:gap-2 p-1.5 sm:p-2 border rounded-lg cursor-pointer
+                            hover:bg-slate-50 transition-colors text-xs sm:text-sm"
+                     [class.border-primary]="form.get('scope')?.value === 'apartment'">
+                <input type="radio" formControlName="scope" value="apartment" class="hidden">
+                <span>🏠 Appartements</span>
+              </label>
+              
+              <label class="flex items-center justify-center gap-1 sm:gap-2 p-1.5 sm:p-2 border rounded-lg cursor-pointer
+                            hover:bg-slate-50 transition-colors text-xs sm:text-sm"
+                     [class.border-primary]="form.get('scope')?.value === 'parking'">
+                <input type="radio" formControlName="scope" value="parking" class="hidden">
+                <span>🅿️ Parking</span>
+              </label>
+
+              <label class="flex items-center justify-center gap-1 sm:gap-2 p-1.5 sm:p-2 border rounded-lg cursor-pointer
+                            hover:bg-slate-50 transition-colors text-xs sm:text-sm"
+                     [class.border-primary]="form.get('scope')?.value === 'ascenseur'">
+                <input type="radio" formControlName="scope" value="ascenseur" class="hidden">
+                <span>🛗 Ascenseur</span>
+              </label>
+            </div>
+
+            <!-- Info parking scope -->
+            @if (form.get('scope')?.value === 'parking') {
+              <div class="mt-3 sm:mt-4 p-3 sm:p-4 bg-blue-50 rounded-lg sm:rounded-xl border border-blue-200">
+                <p class="text-xs sm:text-sm text-blue-800 font-medium">
+                  🅿️ Cette charge sera appliquée uniquement aux appartements disposant d'un parking.
+                </p>
+                <p class="text-[10px] sm:text-xs text-blue-600 mt-1">
+                  Le montant sera réparti entre les copropriétaires ayant coché « Parking » dans les caractéristiques de leur appartement.
+                </p>
+              </div>
+            }
+
+            @if (form.get('scope')?.value === 'ascenseur') {
+              <div class="mt-3 sm:mt-4 p-3 sm:p-4 bg-indigo-50 rounded-lg sm:rounded-xl border border-indigo-200">
+                <p class="text-xs sm:text-sm text-indigo-800 font-medium">
+                  🛗 Cette charge sera appliquée uniquement aux appartements disposant d'un ascenseur.
+                </p>
+                <p class="text-[10px] sm:text-xs text-indigo-600 mt-1">
+                  Le montant sera appliqué aux copropriétaires dont l'appartement a l'option « Ascenseur » dans ses caractéristiques.
+                </p>
+              </div>
+            }
+
+            <!-- Sélection des bâtiments -->
+            @if (form.get('scope')?.value === 'building') {
+              <div class="mt-3 sm:mt-4 p-3 sm:p-4 bg-slate-50 rounded-lg sm:rounded-xl border border-slate-200">
+                <h5 class="text-sm font-semibold text-slate-700 mb-2 sm:mb-3">Sélection de bâtiment(s)</h5>
+                
+                <div class="flex gap-3 sm:gap-4 mb-2 sm:mb-3">
+                  <label class="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                    <input type="radio" 
+                           value="all" 
+                           formControlName="batimentSelection"
+                           class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary border-slate-300 focus:ring-primary/30">
+                    <span>Tous</span>
+                  </label>
+                  
+                  <label class="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                    <input type="radio" 
+                           value="specific" 
+                           formControlName="batimentSelection"
+                           class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary border-slate-300 focus:ring-primary/30">
+                    <span>Spécifique</span>
+                  </label>
+                </div>
+
+                @if (form.get('batimentSelection')?.value === 'specific') {
+                  <div class="space-y-1 sm:space-y-2 max-h-32 sm:max-h-48 overflow-y-auto border border-slate-200 rounded-lg p-2 sm:p-3 bg-white">
+                    @for (batiment of batiments(); track batiment.docId) {
+                      <label class="flex items-center gap-2 sm:gap-3 p-1 sm:p-2 hover:bg-slate-50 rounded-lg cursor-pointer text-xs sm:text-sm">
+                        <input type="checkbox" 
+                               [value]="batiment.docId"
+                               class="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded border-slate-300 text-primary focus:ring-primary/30"
+                               (change)="onBatimentChange($event, batiment.docId)"
+                               [checked]="isBatimentSelected(batiment.docId)">
+                        <span class="truncate">{{ batiment.nom }}</span>
+                      </label>
+                    }
+                  </div>
+
+                  <!-- Sélection des étages (optionnelle) -->
+                  @if (availableEtages().length > 0) {
+                    <div class="mt-3 sm:mt-4">
+                      <h6 class="text-xs font-semibold text-slate-600 mb-1 sm:mb-2">Étages spécifiques</h6>
+                      <div class="grid grid-cols-2 sm:grid-cols-3 gap-1 sm:gap-2 max-h-24 sm:max-h-32 overflow-y-auto border border-slate-200 rounded-lg p-2 sm:p-3 bg-white">
+                        @for (etage of availableEtages(); track etage.numero) {
+                          <label class="flex items-center gap-1 sm:gap-2 p-1 hover:bg-slate-50 rounded cursor-pointer text-xs">
+                            <input type="checkbox" 
+                                   [value]="etage.numero"
+                                   class="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded border-slate-300 text-primary focus:ring-primary/30"
+                                   (change)="onFloorChange($event, etage.numero)"
+                                   [checked]="isFloorSelected(etage.numero)">
+                            <span class="truncate">{{ formatEtageLabel(etage.numero) }}</span>
+                          </label>
+                        }
+                      </div>
+                    </div>
+                  }
+                }
+              </div>
+            }
+
+            <!-- Sélection des appartements -->
+            @if (form.get('scope')?.value === 'apartment') {
+              <div class="mt-3 sm:mt-4 p-3 sm:p-4 bg-slate-50 rounded-lg sm:rounded-xl border border-slate-200">
+                <h5 class="text-sm font-semibold text-slate-700 mb-2 sm:mb-3">Sélection d'appartement(s)</h5>
+                
+                <div class="flex gap-3 sm:gap-4 mb-2 sm:mb-3">
+                  <label class="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                    <input type="radio" 
+                           value="all" 
+                           formControlName="appartementSelection"
+                           class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary border-slate-300 focus:ring-primary/30">
+                    <span>Tous</span>
+                  </label>
+                  
+                  <label class="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                    <input type="radio" 
+                           value="specific" 
+                           formControlName="appartementSelection"
+                           class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary border-slate-300 focus:ring-primary/30">
+                    <span>Spécifique</span>
+                  </label>
+                </div>
+
+                @if (form.get('appartementSelection')?.value === 'specific') {
+                  <!-- Filtre par bâtiment pour les appartements -->
+                  <div class="mb-2 sm:mb-3">
+                    <select class="w-full text-xs sm:text-sm border border-slate-200 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 bg-white"
+                            (change)="onBatimentFilterChange($event)">
+                      <option value="">Tous les bâtiments</option>
+                      @for (batiment of batiments(); track batiment.docId) {
+                        <option [value]="batiment.docId">{{ batiment.nom }}</option>
+                      }
+                    </select>
+                  </div>
+
+                  <div class="space-y-1 sm:space-y-2 max-h-32 sm:max-h-48 overflow-y-auto border border-slate-200 rounded-lg p-2 sm:p-3 bg-white">
+                    @for (appartement of filteredAppartements(); track appartement.docId) {
+                      <label class="flex items-center gap-2 sm:gap-3 p-1 sm:p-2 hover:bg-slate-50 rounded-lg cursor-pointer">
+                        <input type="checkbox" 
+                               [value]="appartement.docId"
+                               class="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded border-slate-300 text-primary focus:ring-primary/30"
+                               (change)="onAppartementChange($event, appartement.docId)"
+                               [checked]="isAppartementSelected(appartement.docId)">
+                        <div class="flex flex-col min-w-0">
+                          <span class="text-xs sm:text-sm text-slate-700 truncate">{{ appartement.numero }}</span>
+                          <span class="text-[10px] sm:text-xs text-slate-500 truncate">{{ getBatimentName(appartement.batimentDocId) }}</span>
+                        </div>
+                      </label>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+            @if (form.get('scope')?.value === 'building' || form.get('scope')?.value === 'apartment') {
+              <label class="flex items-center gap-2 sm:gap-3 cursor-pointer select-none mt-2 sm:mt-3">
+                <input
+                  class="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded border-slate-300 accent-primary
+                         focus:ring-primary/30"
+                  type="checkbox"
+                  formControlName="applicable_parking" />
+                <span class="text-xs sm:text-sm text-slate-700 font-medium">Inclure les parkings</span>
+              </label>
+            }
+          </div>
+
+          <!-- Notes -->
+          <label class="flex flex-col gap-1 sm:gap-1.5">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Notes</span>
+            <textarea
+              class="rounded-lg sm:rounded-xl border border-slate-200 px-3 sm:px-3.5 py-2 sm:py-2.5 text-xs sm:text-sm
+                     focus:outline-none focus:ring-2 focus:ring-primary/30
+                     focus:border-primary transition-all"
+              formControlName="notes"
+              rows="2"
+              placeholder="Notes additionnelles..."></textarea>
+          </label>
+
+          <!-- Actions -->
+          <div class="flex items-center justify-end gap-2 sm:gap-3 border-t border-slate-100 pt-4 sm:pt-5">
+            <button
+              class="px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border border-slate-200 text-slate-600
+                     hover:bg-slate-50 font-semibold text-xs sm:text-sm transition-colors"
+              type="button"
+              (click)="closeModal()">
+              Annuler
+            </button>
+            <button
+              class="px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-primary hover:bg-primary/90
+                     text-white font-semibold text-xs sm:text-sm shadow-sm
+                     transition-all active:scale-95 disabled:opacity-50
+                     disabled:cursor-not-allowed"
+              type="submit"
+              [disabled]="!form.valid">
+              {{ editingId() ? 'Mettre à jour' : 'Créer la charge' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+</div>
